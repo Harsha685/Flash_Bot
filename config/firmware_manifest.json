@@ -1,0 +1,8 @@
+{
+    "arduino:renesas_uno:unor4wifi": {
+        "sketches": [
+            "sketches/blink/blink.ino",
+            "sketches/serial_test/serial_test.ino"
+        ]
+    }
+}
