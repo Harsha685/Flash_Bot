@@ -22,7 +22,7 @@ class SerialComm:
                     baudrate=self.baud,
                     timeout=self.timeout
                 )
-                time.sleep(2)  # wait for board reset
+                time.sleep(2)
                 return
             except serial.SerialException as e:
                 if attempt < retries - 1:
@@ -38,7 +38,7 @@ class SerialComm:
 
     def send(self, command: str) -> str:
         if not self.serial or not self.serial.is_open:
-            raise RuntimeError("Not connected. Use context manager or call connect() first.")
+            raise RuntimeError("Not connected. Call connect() first.")
         try:
             self.serial.reset_input_buffer()
             self.serial.write((command + '\n').encode('utf-8'))
@@ -67,5 +67,4 @@ class SerialComm:
 
     @staticmethod
     def list_ports():
-        ports = serial.tools.list_ports.comports()
-        return [p.device for p in ports if p.vid is not None]
+        return [p.device for p in serial.tools.list_ports.comports()]

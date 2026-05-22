@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+*.pyc
+flashbot.db
+*.egg-info/
+bin/
