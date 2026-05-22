@@ -1,8 +1,12 @@
 {
-    "arduino:renesas_uno:unor4wifi": {
-        "sketches": [
-            "sketches/blink/blink.ino",
-            "sketches/serial_test/serial_test.ino"
-        ]
-    }
+  "esp32:esp32:esp32": {
+    "sketches": [
+      "sketches/esp32/esp32/esp32/blink/blink.ino"
+    ]
+  },
+  "arduino:renesas_uno:unor4wifi": {
+    "sketches": [
+      "sketches/arduino/renesas_uno/unor4wifi/blink/blink.ino"
+    ]
+  }
 }
