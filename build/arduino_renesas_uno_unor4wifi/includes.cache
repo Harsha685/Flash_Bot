@@ -7,9 +7,9 @@
   },
   {
     "compile": {
-      "source_path": "/home/harsha-vardhan/Desktop/Projects/FlashBot/build/arduino_renesas_uno_unor4wifi/sketch/blink.ino.cpp",
-      "object_path": "/home/harsha-vardhan/Desktop/Projects/FlashBot/build/arduino_renesas_uno_unor4wifi/sketch/blink.ino.cpp.o",
-      "depfile_path": "/home/harsha-vardhan/Desktop/Projects/FlashBot/build/arduino_renesas_uno_unor4wifi/sketch/blink.ino.cpp.d"
+      "source_path": "/home/harsha-vardhan/Desktop/Projects/FlashBot/build/arduino_renesas_uno_unor4wifi/sketch/serial_test.ino.cpp",
+      "object_path": "/home/harsha-vardhan/Desktop/Projects/FlashBot/build/arduino_renesas_uno_unor4wifi/sketch/serial_test.ino.cpp.o",
+      "depfile_path": "/home/harsha-vardhan/Desktop/Projects/FlashBot/build/arduino_renesas_uno_unor4wifi/sketch/serial_test.ino.cpp.d"
     },
     "compile_task": {
       "args": [
@@ -41,7 +41,7 @@
         "-E",
         "-CC",
         "-DARDUINO=10607",
-        "-DPROJECT_NAME=\"/home/harsha-vardhan/Desktop/Projects/FlashBot/build/arduino_renesas_uno_unor4wifi/blink.ino\"",
+        "-DPROJECT_NAME=\"/home/harsha-vardhan/Desktop/Projects/FlashBot/build/arduino_renesas_uno_unor4wifi/serial_test.ino\"",
         "-DARDUINO_UNOWIFIR4",
         "-DARDUINO_ARCH_RENESAS_UNO",
         "-DARDUINO_ARCH_RENESAS",
@@ -57,7 +57,7 @@
         "-I/home/harsha-vardhan/.arduino15/packages/arduino/hardware/renesas_uno/1.5.3/variants/UNOWIFIR4",
         "-iprefix/home/harsha-vardhan/.arduino15/packages/arduino/hardware/renesas_uno/1.5.3",
         "@/home/harsha-vardhan/.arduino15/packages/arduino/hardware/renesas_uno/1.5.3/variants/UNOWIFIR4/includes.txt",
-        "/home/harsha-vardhan/Desktop/Projects/FlashBot/build/arduino_renesas_uno_unor4wifi/sketch/blink.ino.cpp",
+        "/home/harsha-vardhan/Desktop/Projects/FlashBot/build/arduino_renesas_uno_unor4wifi/sketch/serial_test.ino.cpp",
         "-o",
         "/dev/null"
       ]

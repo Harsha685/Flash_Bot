@@ -23,6 +23,12 @@ def get_tests_for_sketch(sketch_path: str):
         return [
             TestCase("board_boots", "", "", timeout=3),
         ]
+    elif "serial_test" in sketch_name:
+        return [
+            TestCase("ping",    "PING",    "PONG", timeout=2),
+            TestCase("led_on",  "LED_ON",  "OK",   timeout=2),
+            TestCase("led_off", "LED_OFF", "OK",   timeout=2),
+        ]
     elif "echo" in sketch_name or "serial" in sketch_name:
         return [
             TestCase("echo_hello", "HELLO", "HELLO", timeout=2),
