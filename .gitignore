@@ -4,3 +4,4 @@ __pycache__/
 flashbot.db
 *.egg-info/
 bin/
+build/
