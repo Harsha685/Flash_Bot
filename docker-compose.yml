@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  flashbot:
+    build: .
+    privileged: true
+    volumes:
+      - /dev:/dev
+      - /run/udev:/run/udev:ro
+      - ./logs:/app/logs
+      - ./config:/app/config
+      - ./sketches:/app/sketches
+    network_mode: host

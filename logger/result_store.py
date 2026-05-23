@@ -1,108 +1,71 @@
+import os
 import sqlite3
-import datetime
+import hashlib
 
-class ResultStore:
-    def __init__(self, db_path: str = "flashbot.db"):
-        self.db_path = db_path
-        self.conn = sqlite3.connect(db_path)
-        self._init_db()
+DB_PATH = "logs/flashbot.db"
 
-    def _init_db(self):
-        cursor = self.conn.cursor()
-        cursor.executescript("""
-            CREATE TABLE IF NOT EXISTS devices (
-                id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                serial_number TEXT UNIQUE,
-                name          TEXT,
-                fqbn          TEXT,
-                vid           TEXT,
-                pid           TEXT
-            );
+def init_db():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS flash_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            board_name TEXT NOT NULL,
+            fqbn TEXT NOT NULL,
+            port TEXT NOT NULL,
+            sketch_path TEXT NOT NULL,
+            status TEXT NOT NULL CHECK(status IN ('success', 'failed')),
+            error TEXT,
+            source_hash TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Migrate old tables that don't have source_hash
+    cursor.execute("PRAGMA table_info(flash_logs)")
+    columns = [col[1] for col in cursor.fetchall()]
+    if "source_hash" not in columns:
+        cursor.execute("ALTER TABLE flash_logs ADD COLUMN source_hash TEXT")
+    
+    conn.commit()
+    conn.close()
 
-            CREATE TABLE IF NOT EXISTS flash_runs (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                device_id  INTEGER,
-                sketch     TEXT,
-                success    INTEGER,
-                error      TEXT,
-                timestamp  TEXT,
-                FOREIGN KEY (device_id) REFERENCES devices(id)
-            );
+def save_result(board_name, fqbn, port, sketch_path, status, error=None, source_hash=None):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO flash_logs (board_name, fqbn, port, sketch_path, status, error, source_hash)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (board_name, fqbn, port, sketch_path, status, error, source_hash))
+    conn.commit()
+    conn.close()
 
-            CREATE TABLE IF NOT EXISTS test_results (
-                id       INTEGER PRIMARY KEY AUTOINCREMENT,
-                run_id   INTEGER,
-                command  TEXT,
-                response TEXT,
-                passed   INTEGER,
-                FOREIGN KEY (run_id) REFERENCES flash_runs(id)
-            );
-        """)
-        self.conn.commit()
+def get_results():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM flash_logs ORDER BY id DESC')
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
 
-    def log_device(self, device) -> int:
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT OR IGNORE INTO devices (serial_number, name, fqbn, vid, pid)
-            VALUES (?, ?, ?, ?, ?)
-        """, (device.serial_number, device.name, device.fqbn, device.vid, device.pid))
-        self.conn.commit()
-        cursor.execute("SELECT id FROM devices WHERE serial_number = ?", (device.serial_number,))
-        return cursor.fetchone()[0]
+def get_last_successful_hash(board_name, sketch_path):
+    """
+    Return the source hash from the last successful flash of this board+sketch.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT source_hash FROM flash_logs 
+        WHERE board_name=? AND sketch_path=? AND status='success'
+        ORDER BY id DESC LIMIT 1
+    ''', (board_name, sketch_path))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else None
 
-    def log_flash(self, device_id: int, sketch: str, success: bool, error: str = "") -> int:
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO flash_runs (device_id, sketch, success, error, timestamp)
-            VALUES (?, ?, ?, ?, ?)
-        """, (device_id, sketch, int(success), error, datetime.datetime.now().isoformat()))
-        self.conn.commit()
-        return cursor.lastrowid
-
-    def log_test(self, run_id: int, command: str, response: str, passed: bool):
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO test_results (run_id, command, response, passed)
-            VALUES (?, ?, ?, ?)
-        """, (run_id, command, response, int(passed)))
-        self.conn.commit()
-
-    def get_recent_failures(self, days: int = 7):
-        cursor = self.conn.cursor()
-        since = (datetime.datetime.now() - datetime.timedelta(days=days)).isoformat()
-        cursor.execute("""
-            SELECT f.id, d.name, f.sketch, f.error, f.timestamp
-            FROM flash_runs f
-            JOIN devices d ON f.device_id = d.id
-            WHERE f.success = 0
-            AND f.timestamp >= ?
-            ORDER BY f.timestamp DESC
-        """, (since,))
-        return cursor.fetchall()
-
-    def get_all_runs(self):
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT f.id, d.name, f.sketch, f.success, f.error, f.timestamp
-            FROM flash_runs f
-            JOIN devices d ON f.device_id = d.id
-            ORDER BY f.timestamp DESC
-        """)
-        return cursor.fetchall()
-
-    def export_csv(self, path: str = "flashbot_results.csv"):
-        import csv
-        rows = self.get_all_runs()
-        with open(path, "w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["id", "device", "sketch", "success", "error", "timestamp"])
-            writer.writerows(rows)
-        print(f"Exported {len(rows)} rows to {path}")
-
-    def close(self):
-        self.conn.close()
-
-if __name__ == "__main__":
-    store = ResultStore()
-    print("Database created successfully")
-    store.close()
+def _file_hash(path):
+    """SHA256 of file contents."""
+    with open(path, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()

@@ -1,0 +1,9 @@
+{
+  "additionalFiles": "",
+  "compiler.optimization_flags": "-Os",
+  "customBuildProperties": "",
+  "fqbn": "arduino:renesas_uno:unor4wifi",
+  "hardwareFolders": "/home/harsha-vardhan/.arduino15/packages/arduino/hardware/renesas_uno/1.5.3,/home/harsha-vardhan/.arduino15/packages/arduino/hardware/renesas_uno/1.5.3",
+  "otherLibrariesFolders": "/home/harsha-vardhan/Arduino/libraries",
+  "sketchLocation": "/home/harsha-vardhan/Desktop/Projects/FlashBot/sketches/arduino/renesas_uno/unor4wifi/blink"
+}

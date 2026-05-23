@@ -14,6 +14,7 @@ pycparser==3.0
 Pygments==2.20.0
 pyserial==3.5
 pytest==9.0.3
+pyudev==0.24.4
 PyYAML==6.0.3
 reedsolo==1.7.0
 rich==15.0.0

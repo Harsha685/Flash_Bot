@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-import sys
 
 class BaseFlasher(ABC):
 
@@ -19,7 +18,8 @@ class BaseFlasher(ABC):
         pass
 
     def run(self, port: str, sketch_path: str) -> bool:
+        """Build then flash in sequence. Stops if build fails."""
         if not self.build(sketch_path):
             print("Build failed. Aborting flash.")
-            sys.exit(0)
+            return False
         return self.flash(port, sketch_path)

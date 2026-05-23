@@ -1,0 +1,14 @@
+[Unit]
+Description=FlashBot Hardware Automation Pipeline
+After=network.target
+
+[Service]
+Type=simple
+User=harsha-vardhan
+WorkingDirectory=/home/harsha-vardhan/Desktop/Projects/FlashBot
+ExecStart=/home/harsha-vardhan/Desktop/Projects/FlashBot/venv/bin/python flashbot.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

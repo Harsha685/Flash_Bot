@@ -1,0 +1,69 @@
+[
+  {
+    "added_include_path": "/home/harsha-vardhan/.arduino15/packages/arduino/hardware/renesas_uno/1.5.3/cores/arduino"
+  },
+  {
+    "added_include_path": "/home/harsha-vardhan/.arduino15/packages/arduino/hardware/renesas_uno/1.5.3/variants/UNOWIFIR4"
+  },
+  {
+    "compile": {
+      "source_path": "/home/harsha-vardhan/Desktop/Projects/FlashBot/build/arduino_renesas_uno_unor4wifi/sketch/blink.ino.cpp",
+      "object_path": "/home/harsha-vardhan/Desktop/Projects/FlashBot/build/arduino_renesas_uno_unor4wifi/sketch/blink.ino.cpp.o",
+      "depfile_path": "/home/harsha-vardhan/Desktop/Projects/FlashBot/build/arduino_renesas_uno_unor4wifi/sketch/blink.ino.cpp.d"
+    },
+    "compile_task": {
+      "args": [
+        "/home/harsha-vardhan/.arduino15/packages/arduino/tools/arm-none-eabi-gcc/7-2017q4/bin/arm-none-eabi-g++",
+        "-c",
+        "-w",
+        "-Os",
+        "-g3",
+        "-fno-use-cxa-atexit",
+        "-fno-rtti",
+        "-fno-exceptions",
+        "-nostdlib",
+        "-DF_CPU=48000000",
+        "-DNO_USB",
+        "-DBACKTRACE_SUPPORT",
+        "-DARDUINO_UNOR4_WIFI",
+        "-std=gnu++17",
+        "-mcpu=cortex-m4",
+        "-mfloat-abi=hard",
+        "-mfpu=fpv4-sp-d16",
+        "-fsigned-char",
+        "-ffunction-sections",
+        "-fdata-sections",
+        "-fmessage-length=0",
+        "-fno-builtin",
+        "-w",
+        "-x",
+        "c++",
+        "-E",
+        "-CC",
+        "-DARDUINO=10607",
+        "-DPROJECT_NAME=\"/home/harsha-vardhan/Desktop/Projects/FlashBot/build/arduino_renesas_uno_unor4wifi/blink.ino\"",
+        "-DARDUINO_UNOWIFIR4",
+        "-DARDUINO_ARCH_RENESAS_UNO",
+        "-DARDUINO_ARCH_RENESAS",
+        "-DARDUINO_FSP",
+        "-D_XOPEN_SOURCE=700",
+        "-mthumb",
+        "@/home/harsha-vardhan/.arduino15/packages/arduino/hardware/renesas_uno/1.5.3/variants/UNOWIFIR4/defines.txt",
+        "-DCFG_TUSB_MCU=OPT_MCU_RAXXX",
+        "-I/home/harsha-vardhan/.arduino15/packages/arduino/hardware/renesas_uno/1.5.3/cores/arduino/tinyusb",
+        "-I/home/harsha-vardhan/.arduino15/packages/arduino/hardware/renesas_uno/1.5.3/cores/arduino/api/deprecated",
+        "-I/home/harsha-vardhan/.arduino15/packages/arduino/hardware/renesas_uno/1.5.3/cores/arduino/api/deprecated-avr-comp",
+        "-I/home/harsha-vardhan/.arduino15/packages/arduino/hardware/renesas_uno/1.5.3/cores/arduino",
+        "-I/home/harsha-vardhan/.arduino15/packages/arduino/hardware/renesas_uno/1.5.3/variants/UNOWIFIR4",
+        "-iprefix/home/harsha-vardhan/.arduino15/packages/arduino/hardware/renesas_uno/1.5.3",
+        "@/home/harsha-vardhan/.arduino15/packages/arduino/hardware/renesas_uno/1.5.3/variants/UNOWIFIR4/includes.txt",
+        "/home/harsha-vardhan/Desktop/Projects/FlashBot/build/arduino_renesas_uno_unor4wifi/sketch/blink.ino.cpp",
+        "-o",
+        "/dev/null"
+      ]
+    }
+  },
+  {
+    "missing_include_h": ""
+  }
+]

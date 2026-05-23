@@ -1,24 +1,12 @@
 {
-    "arduino:renesas_uno:unor4wifi": {
-        "sketches": [
-            "sketches/blink/blink.ino",
-            "sketches/serial_test/serial_test.ino"
-        ]
-    },
-    "arduino:avr:nano": {
-        "sketches": [
-            "sketches/blink/blink.ino",
-            "sketches/serial_test/serial_test.ino"
-        ]
-    },
-    "arduino:avr:uno": {
-        "sketches": [
-            "sketches/blink/blink.ino"
-        ]
-    },
-    "arduino:avr:mega": {
-        "sketches": [
-            "sketches/blink/blink.ino"
-        ]
-    }
+  "esp32:esp32:esp32": {
+    "sketches": [
+      "sketches/esp32/esp32/esp32/blink/blink.ino"
+    ]
+  },
+  "arduino:renesas_uno:unor4wifi": {
+    "sketches": [
+      "sketches/arduino/renesas_uno/unor4wifi/blink/blink.ino"
+    ]
+  }
 }
