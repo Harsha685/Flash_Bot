@@ -14,7 +14,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.prompt import IntPrompt, Confirm, Prompt
 from rich import box
-
+from config.sketch_scanner import is_new_sketch
 from detector.usb_listener import start_listener
 from detector.device_id import detect_from_udev, UnknownBoard
 from detector.device_id import BOARD_TABLE, _save_user_boards
@@ -127,7 +127,8 @@ def prompt_sketch_selection(device, sketches: list) -> Optional[str]:
 
     console.print(f"\n[bold cyan]{device.name}[/bold cyan] — Available sketches:")
     for i, sketch in enumerate(sketches, 1):
-        console.print(f"  {i}. {sketch}")
+        tag = " [bold green][NEW][/bold green]" if is_new_sketch(sketch) else ""
+        console.print(f"  {i}.{tag} {sketch}")
     console.print(f"  {len(sketches) + 1}. [dim]Exit[/dim]")
 
     while True:
@@ -137,6 +138,7 @@ def prompt_sketch_selection(device, sketches: list) -> Optional[str]:
         if 1 <= choice <= len(sketches):
             return sketches[choice - 1]
         console.print("[red]Invalid choice.[/red]")
+
 
 
 # ── Core Pipeline ─────────────────────────────────────────────
