@@ -275,7 +275,7 @@ config/            ← Auto-generated manifest + user board registry
 | Unknown board registration | ✅ Ready | Persists to `config/user_boards.json` |
 | Auto-generated sketch manifest | ✅ Ready | Scans `sketches/` on startup |
 | Rich CLI (colors, tables, spinners) | ✅ Ready | `flashbot.py` |
-| ESP32 flashing | 🚧 Stubbed | Compiles via `arduino-cli`, upload pending real `esptool.py` |
+| ESP32 flashing | ✅ Ready| Compiles via `arduino-cli`, upload pending real `esptool.py` |
 | STM32 / Teensy / Pico | ⬜ Planned | Architecture ready, needs flasher classes |
 | Non-interactive / CI mode | ⬜ Planned | For lab automation |
 
