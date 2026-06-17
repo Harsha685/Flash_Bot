@@ -1,13 +1,15 @@
 {
   "esp32:esp32:esp32": {
     "sketches": [
+      "sketches/esp32/esp32/esp32/ESP_Weather_Forecast/ESP_Weather_Forecast.ino",
+      "sketches/esp32/esp32/esp32/web_server/web_server.ino",
       "sketches/esp32/esp32/esp32/blink/blink.ino"
     ]
   },
   "arduino:renesas_uno:unor4wifi": {
     "sketches": [
-      "sketches/arduino/renesas_uno/unor4wifi/blink/blink.ino",
-      "sketches/arduino/renesas_uno/unor4wifi/serial_test/serial_test.ino"
+      "sketches/arduino/renesas_uno/unor4wifi/serial_test/serial_test.ino",
+      "sketches/arduino/renesas_uno/unor4wifi/blink/blink.ino"
     ]
   }
 }

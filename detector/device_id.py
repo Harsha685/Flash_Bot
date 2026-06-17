@@ -5,6 +5,19 @@ from typing import Optional
 
 USER_BOARDS_PATH = "config/user_boards.json"
 
+COMMON_BOARDS = {
+    "Arduino Uno": "arduino:avr:uno",
+    "Arduino Nano (new bootloader)": "arduino:avr:nano",
+    "Arduino Nano (old bootloader)": "arduino:avr:nano:cpu=atmega328old",
+    "Arduino Mega 2560": "arduino:avr:mega",
+    "Arduino Leonardo": "arduino:avr:leonardo",
+    "Arduino Uno WiFi Rev4": "arduino:renesas_uno:unor4wifi",
+    "ESP32 Dev Module": "esp32:esp32:esp32",
+    "ESP32-S2": "esp32:esp32:esp32s2",
+    "ESP32-S3": "esp32:esp32:esp32s3",
+    "ESP32-C3": "esp32:esp32:esp32c3",
+}
+
 # Hardcoded known boards
 BOARD_TABLE = {
     ("2341", "0043"): {"name": "Arduino Uno",         "fqbn": "arduino:avr:uno"},
@@ -124,3 +137,4 @@ def prompt_for_fqbn(unknown: UnknownBoard) -> Optional[DetectedDevice]:
         pid=unknown.pid,
         serial_number=unknown.serial_number
     )
+

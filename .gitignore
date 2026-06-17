@@ -1,7 +1,5 @@
-venv/
+logs/
+*.db
 __pycache__/
-*.pyc
-flashbot.db
-*.egg-info/
-bin/
+venv/
 build/

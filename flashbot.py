@@ -6,6 +6,10 @@ Run with: python flashbot.py
 Run report: python flashbot.py report
 """
 
+import argparse
+from tools.serial_monitor import SerialMonitor
+from tools.serial_plotter import SerialPlotter
+from tools.serial_base import guess_port
 import json
 import time
 from typing import Optional
@@ -17,6 +21,8 @@ from rich import box
 from config.sketch_scanner import is_new_sketch
 from detector.usb_listener import start_listener
 from detector.device_id import detect_from_udev, UnknownBoard
+from detector.device_id import BOARD_TABLE, _save_user_boards, COMMON_BOARDS
+from config.sketch_watcher import start_sketch_watcher
 from detector.device_id import BOARD_TABLE, _save_user_boards
 from logger.result_store import init_db, get_results
 from config.sketch_scanner import update_manifest
@@ -99,8 +105,7 @@ def prompt_register_board(unknown: UnknownBoard):
         return None
 
     name = Prompt.ask("Enter board name", default="My Board", console=console)
-    fqbn = Prompt.ask("Enter FQBN", default="arduino:avr:uno", console=console)
-
+    fqbn = prompt_select_board_type()
     if not name or not fqbn:
         console.print("[red]Name and FQBN required. Skipping.[/red]")
         return None
@@ -129,11 +134,13 @@ def prompt_sketch_selection(device, sketches: list) -> Optional[str]:
     for i, sketch in enumerate(sketches, 1):
         tag = " [bold green][NEW][/bold green]" if is_new_sketch(sketch) else ""
         console.print(f"  {i}.{tag} {sketch}")
-    console.print(f"  {len(sketches) + 1}. [dim]Exit[/dim]")
+    console.print(f"  {len(sketches) + 1}. [dim]Quit FlashBot[/dim]")
 
     while True:
         choice = IntPrompt.ask("Select", console=console)
         if choice == len(sketches) + 1:
+            global _shutdown
+            _shutdown = True
             return None
         if 1 <= choice <= len(sketches):
             return sketches[choice - 1]
@@ -179,8 +186,6 @@ def run_pipeline(device):
         except KeyboardInterrupt:
             console.print("\n[bold red]Stopping.[/bold red]")
             raise
-
-
 
 # ── Event Handlers ────────────────────────────────────────────
 def on_device(device):
@@ -284,25 +289,78 @@ def reporter_cli():
             title="Failures",
         ))
 
+def main():
+    parser = argparse.ArgumentParser(description="FlashBot")
+    subparsers = parser.add_subparsers(dest="command", help="Command to run")
+    
+    # --- Auto-pipeline (default) ---
+    run_parser = subparsers.add_parser("run", help="Auto-detect, compile, flash, and test")
+    
+    # --- Serial Monitor ---
+    mon_parser = subparsers.add_parser("monitor", help="Open interactive serial monitor")
+    mon_parser.add_argument("port", nargs="?", default=None, help="Serial port (auto-detect if omitted)")
+    mon_parser.add_argument("-b", "--baud", type=int, default=115200)
+    mon_parser.add_argument("-l", "--log", help="Log file path")
+    
+    # --- Serial Plotter ---
+    plot_parser = subparsers.add_parser("plotter", help="Open real-time serial plotter")
+    plot_parser.add_argument("port", nargs="?", default=None, help="Serial port (auto-detect if omitted)")
+    plot_parser.add_argument("-b", "--baud", type=int, default=115200)
+    plot_parser.add_argument("-n", "--history", type=int, default=80)
+    plot_parser.add_argument("--labels", nargs="+", default=[])
+    
+    # --- Report ---
+    rep_parser = subparsers.add_parser("report", help="View flash history")
+    
+    args = parser.parse_args()
+    
+    if args.command == "monitor":
+        port = args.port or guess_port()
+        if not port:
+            console.print("[red]No serial port found. Please specify one.[/red]")
+            return
+        SerialMonitor(port, args.baud, args.log).run()
+    
+    elif args.command == "plotter":
+        port = args.port or guess_port()
+        if not port:
+            console.print("[red]No serial port found. Please specify one.[/red]")
+            return
+        SerialPlotter(port, args.baud, args.history, args.labels).run()
+    
+    elif args.command == "report":
+        reporter_cli()
+    
+    else:
+        # Default: run the auto-pipeline (same as before)
+        show_banner()
+        init_db()
+        update_manifest()
+        watcher = start_sketch_watcher()
+        check_already_connected()
+        start_listener(on_device, on_unknown=on_unknown)
+        console.print("[dim]Listening for USB devices... (Ctrl+C to quit)[/dim]")
+        try:
+            while not _shutdown:
+                time.sleep(0.5)
+        except KeyboardInterrupt:
+            pass
+        watcher.stop()
+        watcher.join()
+        console.print("[bold red]Stopping.[/bold red]")
+
+def prompt_select_board_type() -> str:
+    console.print("\n[bold]Select board type:[/bold]")
+    names = list(COMMON_BOARDS.keys())
+    for i, name in enumerate(names, 1):
+        console.print(f"  {i}. {name}")
+    console.print(f"  {len(names) + 1}. [dim]Other (enter FQBN manually)[/dim]")
+
+    choice = IntPrompt.ask("Select", console=console)
+    if 1 <= choice <= len(names):
+        return COMMON_BOARDS[names[choice - 1]]
+    return Prompt.ask("Enter FQBN manually", default="arduino:avr:uno", console=console)
 
 # ── Entry Point ───────────────────────────────────────────────
 if __name__ == "__main__":
-    import sys
-
-    if len(sys.argv) > 1 and sys.argv[1] == "report":
-        reporter_cli()
-        sys.exit(0)
-
-    show_banner()
-    init_db()
-    update_manifest()
-    check_already_connected()
-    start_listener(on_device, on_unknown=on_unknown)
-
-    console.print("[dim]Listening for USB devices... (Ctrl+C to quit)[/dim]")
-    try:
-        while not _shutdown:
-            time.sleep(0.5)
-    except KeyboardInterrupt:
-        pass
-    console.print("[bold red]Stopping.[/bold red]")
+    main()

@@ -1,0 +1,26 @@
+{
+  "10c4:ea60": {
+    "name": "ESP32 DevKit",
+    "fqbn": "esp32:esp32:esp32"
+  },
+  "1a86:7523": {
+    "name": "ESP32 (CH340)",
+    "fqbn": "esp32:esp32:esp32"
+  },
+  "303a:1001": {
+    "name": "ESP32-S2",
+    "fqbn": "esp32:esp32:esp32s2"
+  },
+  "303a:1002": {
+    "name": "ESP32-S3",
+    "fqbn": "esp32:esp32:esp32s3"
+  },
+  "303a:1003": {
+    "name": "ESP32-C3",
+    "fqbn": "esp32:esp32:esp32c3"
+  },
+  "0403:6001": {
+    "name": "Arduino_nano",
+    "fqbn": "arduino:avr:nano:cpu=atmega328old"
+  }
+}
