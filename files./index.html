@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FlashBot — firmware automation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Code:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/flashbot.css" />
+</head>
+<body>
+
+  <!-- ── Navigation ── -->
+  <nav>
+    <div class="container">
+      <a class="logo" href="#" onclick="switchTab('home', document.querySelector('.tab-link[data-tab=home]')); return false;">
+        <span class="d">$</span>
+        <span class="p">~/flashbot</span>
+        <span style="margin:0 4px;color:var(--muted)">❯</span>
+        <span style="color:var(--fg)">Flash<span class="n">Bot</span></span>
+      </a>
+      <button class="tab-link active" data-tab="home"  onclick="switchTab('home',  this)">home</button>
+      <button class="tab-link"        data-tab="guide" onclick="switchTab('guide', this)">guide</button>
+      <button class="tab-link"        data-tab="api"   onclick="switchTab('api',   this)">api</button>
+      <a class="gh-link" href="https://github.com/Harsha685/Flash_Bot" target="_blank" rel="noopener">gh: flashbot</a>
+    </div>
+  </nav>
+
+
+  <!-- ══════════════════════════════════════════
+       HOME
+  ══════════════════════════════════════════ -->
+  <div class="tab-page active" id="page-home">
+    <main>
+
+      <!-- Hero -->
+      <section class="hero rev">
+        <div class="container">
+          <div class="term-window" id="heroTerm">
+            <div class="term-bar">
+              <div class="dots">
+                <span class="dot r"></span>
+                <span class="dot y"></span>
+                <span class="dot g"></span>
+              </div>
+              <span class="dot--auto">FlashBot — v0.1.0-alpha (bash)</span>
+            </div>
+            <div class="term-body">
+              <div class="l dim"># FlashBot — Arduino firmware automation pipeline</div>
+              <div class="l dim"># Plug in a board. FlashBot detects, compiles, flashes, tests, logs.</div>
+              <div class="l" style="height:4px"></div>
+              <div class="l p"><span style="color:var(--green)">$</span> <span class="cmd" id="heroCmd">python flashbot.py</span></div>
+              <div class="l" id="hl0"></div>
+              <div class="l" id="hl1"></div>
+              <div class="l" id="hl2"></div>
+              <div class="l" id="hl3"></div>
+              <div class="l" id="hl4"></div>
+              <div class="l" id="hl5"></div>
+              <div class="l" id="hl6"></div>
+              <div class="l" id="hl7"></div>
+              <div class="l" style="height:4px"></div>
+              <div class="l p"><span style="color:var(--green)">$</span> <span class="cursor"></span></div>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-primary"
+              onclick="switchTab('guide', document.querySelector('[data-tab=guide]'))">$ ./guide</button>
+            <button class="btn btn-outline"
+              onclick="switchTab('api', document.querySelector('[data-tab=api]'))">$ man flashbot</button>
+          </div>
+
+          <div class="status-line" id="boardStatus" title="Click to simulate board detection">
+            <span class="sd idle" id="statusDot"></span>
+            <span id="statusLabel">no board detected</span>
+            <span class="st"  id="statusTime"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- What is FlashBot -->
+      <section class="rev">
+        <div class="container">
+          <div class="sec-hd">
+            <div class="sh-cmd"><span class="d">$</span> cat <span class="fl">--what</span></div>
+            <h2>// what is flashbot?</h2>
+            <p>Python CLI that automates the embedded firmware workflow for Arduino boards.</p>
+          </div>
+          <div class="info-box">
+            <strong>// the problem</strong> Plug in board → IDE → select port → compile → upload →
+            serial monitor → verify → repeat. FlashBot collapses steps 2–7 into one action.
+          </div>
+          <div class="feat-grid">
+            <div class="feat-box rev rev-d1">
+              <div class="ft">[ 01 ]</div>
+              <h3>Detection</h3>
+              <p>Listens for USB hotplug events at the OS level. Sees your board appear on
+                <code>/dev/ttyACM0</code> and reads its hardware ID.</p>
+              <div class="ft-sub">pyudev · hotplug listener</div>
+            </div>
+            <div class="feat-box rev rev-d2">
+              <div class="ft">[ 02 ]</div>
+              <h3>Identification</h3>
+              <p>Checks internal board database. Known board → loads FQBN.
+                Unknown → shows USB IDs and asks once. Remembered forever.</p>
+              <div class="ft-sub">BOARD_TABLE · user_boards.json</div>
+            </div>
+            <div class="feat-box rev rev-d3">
+              <div class="ft">[ 03 ]</div>
+              <h3>Sketch selection</h3>
+              <p>Scans <code>sketches/</code> folder tree for firmware projects matching your board.
+                Auto-selects if one exists, otherwise shows a numbered menu.</p>
+              <div class="ft-sub">firmware_manifest.json</div>
+            </div>
+            <div class="feat-box rev rev-d4">
+              <div class="ft">[ 04 ]</div>
+              <h3>Compilation</h3>
+              <p>Calls <code>arduino-cli</code> to compile. Computes SHA-256 hash of source — if
+                unchanged since last success, <strong>skips compilation entirely</strong>.</p>
+              <div class="ft-sub">hash-guarded builds</div>
+            </div>
+            <div class="feat-box rev rev-d5">
+              <div class="ft">[ 05 ]</div>
+              <h3>Flashing</h3>
+              <p>Uploads the compiled binary over USB/serial. Factory pattern in
+                <code>flasher/</code> means adding a board family = one file + one line.</p>
+              <div class="ft-sub">arduino-cli · esptool (stub)</div>
+            </div>
+            <div class="feat-box rev rev-d6">
+              <div class="ft">[ 06 ]</div>
+              <h3>Testing &amp; logging</h3>
+              <p>Opens serial connection, runs test suite (<code>blink</code> → port opens,
+                <code>echo</code> → sends HELLO, expects HELLO). Results saved to SQLite.</p>
+              <div class="ft-sub">pyserial · SQLite</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Quick start -->
+      <section class="rev">
+        <div class="container">
+          <div class="sec-hd">
+            <div class="sh-cmd"><span class="d">$</span> make <span class="fl">quickstart</span></div>
+            <h2>// quick start</h2>
+            <p>Three steps from zero to a flashed board.</p>
+          </div>
+          <div class="qstart-grid">
+            <div>
+              <div class="step-list">
+                <div class="step-item">
+                  <span class="num">1</span>
+                  <p><strong>Install prerequisites</strong>Python 3.10+, arduino-cli, pyudev (Linux).</p>
+                </div>
+                <div class="step-item">
+                  <span class="num">2</span>
+                  <p><strong>Clone FlashBot</strong><code>git clone</code> and
+                    <code>pip install pyserial pyudev rich</code>.</p>
+                </div>
+                <div class="step-item">
+                  <span class="num">3</span>
+                  <p><strong>Plug &amp; run</strong><code>python flashbot.py</code>.
+                    Detection, compile, flash, test happen automatically.</p>
+                </div>
+              </div>
+              <pre><span style="color:var(--muted)"># install arduino-cli core</span>
+arduino-cli core update-index
+arduino-cli core install arduino:avr
+arduino-cli core install arduino:renesas_uno
+
+<span style="color:var(--muted)"># run</span>
+cd ~/FlashBot
+python flashbot.py</pre>
+            </div>
+
+            <!-- Interactive terminal demo -->
+            <div class="term-window">
+              <div class="term-bar">
+                <div class="dots">
+                  <span class="dot r"></span>
+                  <span class="dot y"></span>
+                  <span class="dot g"></span>
+                </div>
+                <span class="dot--auto">flashbot.py</span>
+              </div>
+              <div class="term-body" id="interactiveTerm">
+                <div class="l p"><span style="color:var(--green)">$</span> <span id="termCmd">python flashbot.py</span></div>
+                <div class="l" id="termL0"></div>
+                <div class="l" id="termL1"></div>
+                <div class="l" id="termL2"></div>
+                <div class="l" id="termL3"></div>
+                <div class="l" id="termL4"></div>
+                <div class="l" id="termL5"></div>
+                <div class="l" id="termL6"></div>
+              </div>
+              <div class="term-actions">
+                <button class="act" onclick="runPipeline('flash')">flash</button>
+                <button onclick="runPipeline('report')">report</button>
+                <button onclick="runPipeline('unknown')">unknown board</button>
+                <button onclick="runPipeline('watch')">watch</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Architecture -->
+      <section class="rev">
+        <div class="container">
+          <div class="sec-hd">
+            <div class="sh-cmd"><span class="d">$</span> cat <span class="fl">--pipeline</span></div>
+            <h2>// architecture</h2>
+            <p>From USB plug to logged result — the full data flow.</p>
+          </div>
+          <div class="asm-flow">
+            <code>USB plug</code> <span class="a">→</span>
+            <code>detector</code> <span class="a">→</span>
+            <code>flashbot.py</code> <span class="a">→</span>
+            <code>flasher</code> <span class="a">→</span>
+            <code>tester</code> <span class="a">→</span>
+            <code>logger</code>
+          </div>
+          <div class="asm-grid">
+            <div class="asm-box">
+              <div class="al">[ detect ]</div>
+              <div class="an">detector/</div>
+              <div class="ad">udev hotplug listener + device_id.py.
+                Emits DetectedDevice or prompts for unknown board.</div>
+            </div>
+            <div class="asm-box">
+              <div class="al">[ orchestrate ]</div>
+              <div class="an">flashbot.py</div>
+              <div class="ad">Rich CLI entry point. Prompts, spinners, panels.
+                Falls back to main.py for plain output.</div>
+            </div>
+            <div class="asm-box">
+              <div class="al">[ flash ]</div>
+              <div class="an">flasher/</div>
+              <div class="ad">Factory pattern. ArduinoFlasher full,
+                ESPToolFlasher stubbed. One new file per family.</div>
+            </div>
+            <div class="asm-box">
+              <div class="al">[ test ]</div>
+              <div class="an">tester/</div>
+              <div class="ad">SerialComm + TestCases + TestRunner.
+                Per-sketch test suites over serial.</div>
+            </div>
+            <div class="asm-box">
+              <div class="al">[ log ]</div>
+              <div class="an">logger/</div>
+              <div class="ad">SQLite persistence. ResultStore + Reporter CLI
+                (<code>flashbot.py report</code>).</div>
+            </div>
+            <div class="asm-box">
+              <div class="al">[ config ]</div>
+              <div class="an">config/</div>
+              <div class="ad">firmware_manifest.json (auto-generated),
+                user_boards.json, sketch_scanner.py.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Who is this for -->
+      <section class="rev">
+        <div class="container">
+          <div class="sec-hd">
+            <div class="sh-cmd"><span class="d">$</span> cat <span class="fl">--for</span></div>
+            <h2>// who is this for</h2>
+          </div>
+          <div class="feat-grid">
+            <div class="feat-box">
+              <div class="ft">[ hobbyists ]</div>
+              <h3>Faster iteration</h3>
+              <p>Tired of IDE clickfests? Plug in, save, watch FlashBot do the rest.</p>
+            </div>
+            <div class="feat-box">
+              <div class="ft">[ labs ]</div>
+              <h3>Batch flashing</h3>
+              <p>Students flashing multiple boards. Known-board flow skips prompts entirely.</p>
+            </div>
+            <div class="feat-box">
+              <div class="ft">[ embedded devs ]</div>
+              <h3>Repeatable pipeline</h3>
+              <p>Logged, tested, hash-guarded builds. CI-ready via main.py fallback.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div><!-- /page-home -->
+
+
+  <!-- ══════════════════════════════════════════
+       GUIDE
+  ══════════════════════════════════════════ -->
+  <div class="tab-page" id="page-guide">
+    <main class="container-narrow">
+
+      <div class="page-header rev">
+        <div class="pl"><span class="d">$</span> cat <span class="fl">--guide</span></div>
+        <h1>// getting started</h1>
+        <p>From zero to a flashed Arduino board in five minutes.</p>
+      </div>
+
+      <div class="prog-track" id="progTrack">
+        <div class="pt act" onclick="jumpTo(1)"><span class="pn">1</span>prereqs</div>
+        <div class="pt"     onclick="jumpTo(2)"><span class="pn">2</span>install</div>
+        <div class="pt"     onclick="jumpTo(3)"><span class="pn">3</span>first flash</div>
+        <div class="pt"     onclick="jumpTo(4)"><span class="pn">4</span>add a sketch</div>
+        <div class="pt"     onclick="jumpTo(5)"><span class="pn">5</span>report</div>
+      </div>
+
+      <!-- Step 1 -->
+      <div class="doc-sec rev" id="s1">
+        <h2>1. // prerequisites</h2>
+        <h3>Hardware</h3>
+        <ul>
+          <li>An Arduino board (Uno, Nano, Mega, Uno WiFi R4, etc.)</li>
+          <li>USB data cable</li>
+        </ul>
+        <h3>Software</h3>
+        <ul>
+          <li>Python 3.10+</li>
+          <li>Linux (tested on Ubuntu; uses pyudev for USB hotplug)</li>
+          <li><code>arduino-cli</code> in your PATH —
+            <a href="https://arduino.github.io/arduino-cli/latest/installation/">install guide</a></li>
+        </ul>
+        <div class="info-box">
+          <strong>// no board?</strong> FlashBot can still detect simulated devices.
+          The detection and UI work without hardware.
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="doc-sec rev" id="s2">
+        <h2>2. // installation</h2>
+        <h3>Python dependencies</h3>
+        <pre><span style="color:var(--muted)"># install required packages</span>
+pip install pyserial pyudev rich</pre>
+        <h3>Arduino CLI + core</h3>
+        <pre><span style="color:var(--muted)"># then:</span>
+arduino-cli core update-index
+arduino-cli core install arduino:avr          <span style="color:var(--muted)"># Uno, Nano, Mega</span>
+arduino-cli core install arduino:renesas_uno  <span style="color:var(--muted)"># Uno WiFi R4</span></pre>
+        <h3>Clone the repo</h3>
+        <pre>cd ~/Desktop
+git clone https://github.com/Harsha685/Flash_Bot.git
+cd Flash_Bot</pre>
+        <h3>Verify</h3>
+        <pre>python flashbot.py --version
+<span style="color:var(--muted)"># FlashBot v0.1.0-alpha</span></pre>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="doc-sec rev" id="s3">
+        <h2>3. // your first flash</h2>
+        <p>Plug in your Arduino board via USB and run FlashBot:</p>
+        <pre>python flashbot.py</pre>
+        <p>FlashBot detects the board automatically:</p>
+        <div class="term-window" style="margin-bottom:16px">
+          <div class="term-bar">
+            <div class="dots">
+              <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+            </div>
+            <span class="dot--auto">flashbot.py</span>
+          </div>
+          <div class="term-body" style="font-size:12px">
+            <span style="color:var(--cyan)">╭────────────────── Board Detected ──────────────────╮</span><br />
+            │ Arduino Uno WiFi R4                                │<br />
+            │ Port:  /dev/ttyACM0                                │<br />
+            │ FQBN:  arduino:renesas_uno:unor4wifi               │<br />
+            <span style="color:var(--cyan)">╰────────────────────────────────────────────────────╯</span><br />
+            Auto-selected: sketches/arduino/renesas_uno/unor4wifi/blink/blink.ino<br />
+            <span style="color:var(--muted)">Sketch unchanged — skipping compile.</span><br />
+            <span style="color:var(--green)">FLASH OK                    All Tests Passed</span><br />
+            <span style="color:var(--green)">  ✓ board_boots</span><br />
+            <span style="color:var(--muted)">Logged to database</span>
+          </div>
+        </div>
+
+        <div class="expand-sec">
+          <div class="expand-hd" onclick="toggleExp(this)">
+            <span class="ar">▶</span>
+            <h3>// what happens step by step</h3>
+          </div>
+          <div class="expand-bd">
+            <div class="expand-bd-inner" style="font-size:11.5px;color:var(--muted);line-height:1.8">
+              <strong style="color:var(--fg)">1. Detection</strong> — USB hotplug event on <code>/dev/ttyACM0</code>.<br />
+              <strong style="color:var(--fg)">2. Identification</strong> — Board database matches USB IDs to Arduino Uno WiFi R4.<br />
+              <strong style="color:var(--fg)">3. Sketch</strong> — Scans <code>sketches/arduino/renesas_uno/unor4wifi/</code> → auto-selects the only sketch.<br />
+              <strong style="color:var(--fg)">4. Compile</strong> — SHA-256 match → sketch unchanged, compile skipped.<br />
+              <strong style="color:var(--fg)">5. Flash</strong> — <code>arduino-cli</code> uploads over serial.<br />
+              <strong style="color:var(--fg)">6. Test</strong> — Serial connection opens, test suite passes.<br />
+              <strong style="color:var(--fg)">7. Log</strong> — Result saved to <code>logs/flashbot.db</code>.
+            </div>
+          </div>
+        </div>
+
+        <h3>Unknown board flow</h3>
+        <p>If FlashBot doesn't recognize your board, it shows USB IDs and prompts you once:</p>
+        <div class="term-window" style="margin-bottom:16px">
+          <div class="term-bar">
+            <div class="dots">
+              <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+            </div>
+            <span class="dot--auto">flashbot.py</span>
+          </div>
+          <div class="term-body" style="font-size:12px">
+            <span style="color:var(--yellow)">╭────────────────── Unknown Board ───────────────────╮</span><br />
+            │ Port:   /dev/ttyUSB0                                │<br />
+            │ VID:    10c4                                        │<br />
+            │ PID:    ea60                                        │<br />
+            │ Serial: 0001                                        │<br />
+            <span style="color:var(--yellow)">╰────────────────────────────────────────────────────╯</span><br />
+            Register this board? [y/n] (y): <span style="color:var(--fg)">y</span><br />
+            Enter board name [My Board]: <span style="color:var(--fg)">ESP32 DevKit</span><br />
+            Enter FQBN [arduino:avr:uno]: <span style="color:var(--fg)">esp32:esp32:esp32</span><br />
+            <span style="color:var(--green)">Registered ESP32 DevKit — FQBN: esp32:esp32:esp32</span>
+          </div>
+        </div>
+        <p>Saved to <code>config/user_boards.json</code>. Next plug-in is instant.
+          To reset: <code>rm config/user_boards.json</code>.</p>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="doc-sec rev" id="s4">
+        <h2>4. // adding your own sketches</h2>
+        <p>FlashBot maps folder paths directly to FQBNs:</p>
+        <pre>sketches/&lt;vendor&gt;/&lt;arch&gt;/&lt;board&gt;/&lt;sketch_name&gt;/&lt;sketch_name&gt;.ino</pre>
+        <table>
+          <thead>
+            <tr><th>FQBN</th><th>Folder path</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code style="font-size:11px">arduino:avr:uno</code></td>
+              <td><code style="font-size:11px">sketches/arduino/avr/uno/blink/blink.ino</code></td>
+            </tr>
+            <tr>
+              <td><code style="font-size:11px">arduino:renesas_uno:unor4wifi</code></td>
+              <td><code style="font-size:11px">sketches/arduino/renesas_uno/unor4wifi/serial_test/serial_test.ino</code></td>
+            </tr>
+            <tr>
+              <td><code style="font-size:11px">esp32:esp32:esp32</code></td>
+              <td><code style="font-size:11px">sketches/esp32/esp32/esp32/blink/blink.ino</code></td>
+            </tr>
+          </tbody>
+        </table>
+        <p>Drop a new <code>.ino</code> into the correct path and restart FlashBot.
+          The manifest (<code>config/firmware_manifest.json</code>) updates automatically.</p>
+      </div>
+
+      <!-- Step 5 -->
+      <div class="doc-sec rev" id="s5">
+        <h2>5. // viewing history</h2>
+        <p>Every flash result is logged to SQLite. View the history table:</p>
+        <pre>python flashbot.py report</pre>
+        <div class="term-window" style="margin-bottom:16px">
+          <div class="term-bar">
+            <div class="dots">
+              <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+            </div>
+            <span class="dot--auto">flashbot report</span>
+          </div>
+          <div class="term-body" style="font-size:12px">
+            <span style="color:var(--cyan)">Flash History</span><br />
+            ID  Board         FQBN                          Sketch          Status  Timestamp<br />
+            <span style="color:var(--muted)">──  ─────         ────                          ──────          ──────  ─────────</span><br />
+             3  Uno WiFi R4   arduino:renesas_uno:unor4wifi  blink          SUCCESS  2026-05-28<br />
+             2  Uno WiFi R4   arduino:renesas_uno:unor4wifi  serial_test    SUCCESS  2026-05-27<br />
+             1  Uno WiFi R4   arduino:renesas_uno:unor4wifi  blink          FAILED   2026-05-26
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div><!-- /page-guide -->
+
+
+  <!-- ══════════════════════════════════════════
+       API / REFERENCE
+  ══════════════════════════════════════════ -->
+  <div class="tab-page" id="page-api">
+    <main class="container-mid">
+
+      <div class="page-header rev">
+        <div class="pl"><span class="d">$</span> man <span class="fl">flashbot</span></div>
+        <h1>// architecture &amp; reference</h1>
+        <p>Commands, project structure, design decisions, status, and troubleshooting.</p>
+      </div>
+
+      <!-- Search -->
+      <div class="search-bar">
+        <span class="si">⌕</span>
+        <input type="text" id="searchIn"
+          placeholder="filter commands, modules, config keys..."
+          oninput="filterAll(this.value)" />
+        <button class="clr" id="clrBtn" onclick="clrSearch()">✕</button>
+      </div>
+
+      <!-- Commands -->
+      <div class="doc-sec rev" id="cli-cmds">
+        <h2>$ flashbot.py — commands</h2>
+        <p>FlashBot has two entry points: the Rich CLI (<code>flashbot.py</code>) and a plain
+          fallback (<code>main.py</code>).</p>
+        <div class="flt-tabs">
+          <button class="act" onclick="fltCmds('all', this)">all</button>
+          <button onclick="fltCmds('core', this)">core</button>
+          <button onclick="fltCmds('util', this)">utility</button>
+        </div>
+        <table class="cmd-table" id="cmdTbl">
+          <thead>
+            <tr><th>command</th><th>description</th></tr>
+          </thead>
+          <tbody>
+            <tr data-tag="core">
+              <td>python flashbot.py</td>
+              <td>Main pipeline. Detects board, selects sketch, compiles, flashes, tests, logs.</td>
+            </tr>
+            <tr data-tag="core">
+              <td>python flashbot.py report</td>
+              <td>View flash history table from SQLite database.</td>
+            </tr>
+            <tr data-tag="util">
+              <td>python main.py</td>
+              <td>Plain CLI fallback (no Rich). Same pipeline, stdout-only output.</td>
+            </tr>
+            <tr data-tag="util">
+              <td>python smoke_test.py</td>
+              <td>Quick sanity check — verifies imports and core modules load.</td>
+            </tr>
+            <tr data-tag="util">
+              <td>rm config/user_boards.json</td>
+              <td>Reset unknown board registrations. Next plug-in will re-prompt.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Project structure -->
+      <div class="doc-sec rev" id="project-structure">
+        <h2>$ tree — project structure</h2>
+        <p>Each module has a single responsibility. The factory pattern in <code>flasher/</code>
+          means adding a board family requires one new file + one line.</p>
+        <div class="tree">
+          <div class="l"><span class="dir">FlashBot/</span></div>
+          <div class="l">├── <span class="file">flashbot.py</span>        <span class="cmt">← Rich CLI entry point</span></div>
+          <div class="l">├── <span class="file">main.py</span>            <span class="cmt">← Plain CLI fallback</span></div>
+          <div class="l">│</div>
+          <div class="l">├── <span class="dir">config/</span></div>
+          <div class="l">│   ├── <span class="file">firmware_manifest.json</span>  <span class="cmt">← Auto-generated from sketches/</span></div>
+          <div class="l">│   ├── <span class="file">sketch_scanner.py</span>       <span class="cmt">← Walks sketches/, updates manifest</span></div>
+          <div class="l">│   └── <span class="file">user_boards.json</span>        <span class="cmt">← Custom board registrations</span></div>
+          <div class="l">│</div>
+          <div class="l">├── <span class="dir">detector/</span></div>
+          <div class="l">│   ├── <span class="file">device_id.py</span>            <span class="cmt">← BOARD_TABLE + unknown board prompt</span></div>
+          <div class="l">│   └── <span class="file">usb_listener.py</span>         <span class="cmt">← udev hotplug listener thread</span></div>
+          <div class="l">│</div>
+          <div class="l">├── <span class="dir">flasher/</span></div>
+          <div class="l">│   ├── <span class="file">__init__.py</span>             <span class="cmt">← Factory: get_flasher(fqbn)</span></div>
+          <div class="l">│   ├── <span class="file">base_flasher.py</span>         <span class="cmt">← Abstract contract</span></div>
+          <div class="l">│   ├── <span class="file">arduino_flasher.py</span>      <span class="cmt">← arduino-cli compile + upload</span></div>
+          <div class="l">│   └── <span class="file">esptool_flasher.py</span>      <span class="cmt">← 🚧 Stub — compile works, flash pending</span></div>
+          <div class="l">│</div>
+          <div class="l">├── <span class="dir">logger/</span></div>
+          <div class="l">│   ├── <span class="file">result_store.py</span>         <span class="cmt">← SQLite init, save, query</span></div>
+          <div class="l">│   └── <span class="file">reporter.py</span>             <span class="cmt">← Plain-text reporter CLI</span></div>
+          <div class="l">│</div>
+          <div class="l">├── <span class="dir">sketches/</span></div>
+          <div class="l">│   └── <span class="muted">&lt;vendor&gt;/&lt;arch&gt;/&lt;board&gt;/&lt;sketch&gt;/&lt;sketch&gt;.ino</span></div>
+          <div class="l">│</div>
+          <div class="l">├── <span class="dir">tester/</span></div>
+          <div class="l">│   ├── <span class="file">serial_comm.py</span>          <span class="cmt">← pyserial wrapper with retry</span></div>
+          <div class="l">│   ├── <span class="file">test_cases.py</span>           <span class="cmt">← Sketch-to-test mapping</span></div>
+          <div class="l">│   └── <span class="file">test_runner.py</span>          <span class="cmt">← Executes tests over serial</span></div>
+          <div class="l">│</div>
+          <div class="l">├── <span class="dir">tests/</span></div>
+          <div class="l">│   └── <span class="file">test_pipeline.py</span>        <span class="cmt">← Unit tests (placeholder)</span></div>
+          <div class="l">│</div>
+          <div class="l">├── <span class="file">smoke_test.py</span>           <span class="cmt">← Quick sanity check</span></div>
+          <div class="l">└── <span class="file">README.md</span></div>
+        </div>
+      </div>
+
+      <!-- Design decisions -->
+      <div class="doc-sec rev" id="design-decisions">
+        <h2>$ flashbot — key design decisions</h2>
+        <table class="cmd-table" style="font-size:11.5px">
+          <thead><tr><th>decision</th><th>rationale</th></tr></thead>
+          <tbody>
+            <tr><td>Factory pattern in flasher/</td>
+              <td>Adding a board family = 1 file + 1 line. No changes to main orchestration.</td></tr>
+            <tr><td>Hash-guarded builds</td>
+              <td>SHA-256 of .ino stored in DB. Skips compile if unchanged since last success.</td></tr>
+            <tr><td>Unknown board flow</td>
+              <td>Prompts for name + FQBN, persists to JSON. Survives restarts across sessions.</td></tr>
+            <tr><td>Sketch folder tree</td>
+              <td><code>sketches/&lt;vendor&gt;/&lt;arch&gt;/&lt;board&gt;/</code> auto-maps to FQBN.
+                Manifest regenerates on every startup.</td></tr>
+            <tr><td>Rich CLI + plain fallback</td>
+              <td>Rich for interactive use; <code>main.py</code> works when Rich is unavailable or for CI piping.</td></tr>
+            <tr><td>Per-sketch test suites</td>
+              <td>Each sketch defines its own test protocol. Blink → port opens. Echo → send/verify.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Feature status -->
+      <div class="doc-sec rev" id="status">
+        <h2>$ flashbot — feature status</h2>
+        <table class="cmd-table" style="font-size:11.5px">
+          <thead><tr><th>feature</th><th>status</th><th>notes</th></tr></thead>
+          <tbody>
+            <tr><td>USB hotplug detection</td>
+              <td><span style="color:var(--green)">ready</span></td><td>Linux pyudev</td></tr>
+            <tr><td>Arduino compile + flash</td>
+              <td><span style="color:var(--green)">ready</span></td><td>arduino-cli with --input-dir build cache</td></tr>
+            <tr><td>Incremental builds (hash guard)</td>
+              <td><span style="color:var(--green)">ready</span></td><td>SHA-256 check against SQLite</td></tr>
+            <tr><td>Post-flash serial testing</td>
+              <td><span style="color:var(--green)">ready</span></td><td>Per-sketch test suites</td></tr>
+            <tr><td>SQLite logging + reporter</td>
+              <td><span style="color:var(--green)">ready</span></td><td>flashbot.py report</td></tr>
+            <tr><td>Unknown board registration</td>
+              <td><span style="color:var(--green)">ready</span></td><td>Persists to config/user_boards.json</td></tr>
+            <tr><td>Auto-generated sketch manifest</td>
+              <td><span style="color:var(--green)">ready</span></td><td>Scans sketches/ on startup</td></tr>
+            <tr><td>Rich CLI (colors, tables)</td>
+              <td><span style="color:var(--green)">ready</span></td><td>flashbot.py</td></tr>
+            <tr><td>ESP32 flashing</td>
+              <td><span style="color:var(--yellow)">stubbed</span></td>
+              <td>Compiles via arduino-cli, upload pending esptool.py</td></tr>
+            <tr><td>STM32 / Teensy / Pico</td>
+              <td><span style="color:var(--muted)">planned</span></td>
+              <td>Architecture ready, needs flasher classes</td></tr>
+            <tr><td>Non-interactive / CI mode</td>
+              <td><span style="color:var(--muted)">planned</span></td><td>For lab automation</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Troubleshooting -->
+      <div class="doc-sec rev" id="troubleshooting">
+        <h2>$ flashbot — troubleshooting</h2>
+        <h3>"No sketches configured for [board name]"</h3>
+        <p>Your <code>sketches/</code> folder doesn't have a path matching that FQBN.
+          Check <code>config/firmware_manifest.json</code> to see what was detected.</p>
+        <h3>"Compiled sketch not found in ..."</h3>
+        <p>The build cache path and upload path got out of sync. Make sure
+          <code>flasher/arduino_flasher.py</code> has the <code>self.build_dir</code> logic
+          with <code>--input-dir</code> passed to upload.</p>
+        <h3>"No flasher registered for FQBN"</h3>
+        <p>The board is recognized but has no flasher class.
+          Currently only <code>arduino:</code> FQBNs have full flashers.</p>
+        <h3>Board prompts again after flash</h3>
+        <p>Arduino boards reset after upload and briefly re-enumerate on USB.
+          FlashBot has a 5-second debounce cooldown.</p>
+        <h3>"ImportError: cannot import name 'ResultStore'"</h3>
+        <p>You have an old <code>result_store.py</code>. The current codebase uses plain
+          functions (<code>save_result</code>, <code>get_results</code>).</p>
+        <div class="info-box">
+          <strong>// still stuck?</strong> Run <code>python smoke_test.py</code> to verify imports.
+          File an issue on GitHub with the full error output.
+        </div>
+      </div>
+
+      <!-- Roadmap -->
+      <div class="doc-sec rev" id="roadmap">
+        <h2>$ flashbot — roadmap</h2>
+        <table class="cmd-table" style="font-size:11.5px">
+          <thead><tr><th>version</th><th>deliverable</th></tr></thead>
+          <tbody>
+            <tr><td>v0.1.0-alpha</td>
+              <td>Current — Arduino AVR + Renesas Uno, hash-guarded builds, serial testing, SQLite logging</td></tr>
+            <tr><td>v0.2.0</td><td>Full ESP32 support via esptool.py</td></tr>
+            <tr><td>v0.3.0</td><td>Non-interactive mode for batch flashing in labs</td></tr>
+            <tr><td>v0.4.0</td><td>STM32, Teensy, Raspberry Pi Pico support</td></tr>
+            <tr><td>v1.0.0</td><td>Stable multi-platform release with documentation site</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Files to commit -->
+      <div class="doc-sec rev" id="files-to-commit">
+        <h2>$ git — files to commit</h2>
+        <pre># Core pipeline
+flashbot.py
+main.py
+
+# Detection
+detector/__init__.py
+detector/device_id.py
+detector/usb_listener.py
+
+# Flashing abstraction
+flasher/__init__.py
+flasher/base_flasher.py
+flasher/arduino_flasher.py
+flasher/esptool_flasher.py
+
+# Testing
+tester/__init__.py
+tester/serial_comm.py
+tester/test_cases.py
+tester/test_runner.py
+
+# Logging
+logger/__init__.py
+logger/result_store.py
+logger/reporter.py
+
+# Configuration
+config/__init__.py
+config/sketch_scanner.py
+
+# Sketches
+sketches/
+
+# Tests
+smoke_test.py
+tests/test_pipeline.py
+
+# Documentation
+README.md
+
+<span style="color:var(--muted)"># Not committed (add to .gitignore):</span>
+<span style="color:var(--muted)"># logs/           ← SQLite DB + build artifacts</span>
+<span style="color:var(--muted)"># build/          ← arduino-cli build cache</span>
+<span style="color:var(--muted)"># config/firmware_manifest.json  ← auto-generated</span>
+<span style="color:var(--muted)"># config/user_boards.json        ← user-specific</span></pre>
+      </div>
+
+    </main>
+  </div><!-- /page-api -->
+
+
+  <!-- ── Footer ── -->
+  <footer>
+    <div class="container">
+      <div class="links">
+        <button class="tab-link" onclick="switchTab('home',  document.querySelector('[data-tab=home]'))">home</button>
+        <button class="tab-link" onclick="switchTab('guide', document.querySelector('[data-tab=guide]'))">guide</button>
+        <button class="tab-link" onclick="switchTab('api',   document.querySelector('[data-tab=api]'))">api</button>
+        <a href="https://github.com/Harsha685/Flash_Bot" target="_blank" rel="noopener">github</a>
+      </div>
+      <p>FlashBot — MIT License · Arduino firmware automation</p>
+    </div>
+  </footer>
+
+  <script src="js/flashbot.js"></script>
+</body>
+</html>
