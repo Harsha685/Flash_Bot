@@ -1,6 +1,6 @@
 import subprocess
 import time
-from flasher.base_flasher import BaseFlasher
+from flashbot.flasher.base_flasher import BaseFlasher
 
 class EspFlasher(BaseFlasher):
 

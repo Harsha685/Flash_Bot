@@ -2,8 +2,8 @@ import os
 import subprocess
 from rich.console import Console
 from rich.status import Status
-from flasher.base_flasher import BaseFlasher
-from logger.result_store import get_last_successful_hash
+from flashbot.flasher.base_flasher import BaseFlasher
+from flashbot.logger.result_store import get_last_successful_hash
 
 console = Console()
 

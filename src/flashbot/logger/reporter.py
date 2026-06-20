@@ -1,4 +1,4 @@
-from logger.result_store import get_results, init_db
+from flashbot.logger.result_store import get_results, init_db
 import datetime
 
 def print_history():

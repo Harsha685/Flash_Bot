@@ -1,4 +1,3 @@
-# config/sketch_watcher.py
 """
 Watches sketches/ for changes and regenerates the manifest automatically.
 No more restarting FlashBot every time you add a sketch.
@@ -6,7 +5,7 @@ No more restarting FlashBot every time you add a sketch.
 import threading
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from config.sketch_scanner import update_manifest, SKETCHES_DIR
+from flashbot.config.sketch_scanner import update_manifest, SKETCHES_DIR
 
 
 class _ManifestHandler(FileSystemEventHandler):

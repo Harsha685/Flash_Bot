@@ -1,6 +1,6 @@
 import pyudev
 import threading
-from detector.device_id import detect_from_udev, UnknownBoard, prompt_for_fqbn
+from flashbot.detector.device_id import detect_from_udev, UnknownBoard, prompt_for_fqbn
 
 def start_listener(on_device, on_unknown=None):
     context = pyudev.Context()

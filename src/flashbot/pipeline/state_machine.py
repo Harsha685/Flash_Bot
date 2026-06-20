@@ -1,8 +1,8 @@
 from enum import Enum
 from flasher import get_flasher
-from tester.test_cases import get_tests_for_sketch
-from tester.test_runner import TestRunner
-from logger.result_store import save_result
+from flashbot.tester.test_cases import get_tests_for_sketch
+from flashbot.tester.test_runner import TestRunner
+from flashbot.logger.result_store import save_result
 
 class PipelineState(Enum):
     IDLE     = "idle"

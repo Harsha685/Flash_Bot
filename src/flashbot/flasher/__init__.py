@@ -1,5 +1,5 @@
-from flasher.arduino_flasher import ArduinoFlasher
-from flasher.esptool_flasher import EspFlasher
+from flashbot.flasher.arduino_flasher import ArduinoFlasher
+from flashbot.flasher.esptool_flasher import EspFlasher
 
 def get_flasher(fqbn: str):
     if fqbn.startswith("arduino:"):
