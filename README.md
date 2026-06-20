@@ -87,7 +87,7 @@ arduino-cli core install arduino:renesas_uno  # Uno WiFi R4
 arduino-cli core install esp32:esp32          # ESP32 boards
 
 # 3. Clone and install
-git clone https://github.com/<your-username>/FlashBot.git
+git clone https://github.com/Harsha683/FlashBot.git
 cd FlashBot
 poetry install
 
