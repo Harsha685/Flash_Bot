@@ -3,8 +3,8 @@ Runs test cases over serial after flashing.
 Uses tester/serial_comm.py for all port I/O.
 """
 
-from tester.serial_comm import SerialComm
-from tester.test_cases import TestCase
+from flashbot.tester.serial_comm import SerialComm
+from flashbot.tester.test_cases import TestCase
 
 
 class TestRunner:

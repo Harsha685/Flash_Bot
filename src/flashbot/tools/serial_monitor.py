@@ -1,15 +1,13 @@
 import argparse
 import sys
 import time
+import signal
 import threading
+import select
 from datetime import datetime
 from pathlib import Path
 
-try:
-    from tools.serial_base import SerialConnection, guess_port
-except ImportError:
-    sys.path.insert(0, str(Path(__file__).parent.parent))
-    from tools.serial_base import SerialConnection, guess_port
+from flashbot.tools.serial_base import SerialConnection, guess_port
 
 try:
     from rich.console import Console
@@ -52,6 +50,11 @@ class SerialMonitor:
 
         self._running = True
 
+        def handle_sigint(sig, frame):
+            self._running = False
+
+        old_handler = signal.signal(signal.SIGINT, handle_sigint)
+
         if self.console:
             self.console.print(Panel.fit(
                 f"Serial Monitor\n{self.conn.port} @ {self.conn.baudrate} baud\n"
@@ -61,15 +64,16 @@ class SerialMonitor:
         else:
             print(f"Serial Monitor — {self.conn.port} @ {self.conn.baudrate} baud (Ctrl+C to exit)")
 
+        stop_input = threading.Event()
+
         def input_thread():
-            while self._running:
-                try:
-                    cmd = input()
+            while not stop_input.is_set():
+                ready, _, _ = select.select([sys.stdin], [], [], 0.2)
+                if ready:
+                    cmd = sys.stdin.readline().strip()
                     if cmd:
                         self.conn.write(cmd + "\n")
                         self._print(f"→ {cmd}", "yellow")
-                except EOFError:
-                    break
 
         t = threading.Thread(target=input_thread, daemon=True)
         t.start()
@@ -82,9 +86,11 @@ class SerialMonitor:
                 else:
                     time.sleep(0.01)
         except KeyboardInterrupt:
-            pass
-        finally:
             self._running = False
+        finally:
+            stop_input.set()
+            t.join(timeout=1)
+            signal.signal(signal.SIGINT, old_handler)
             self.conn.close()
             self._print("Disconnected.", "dim")
 

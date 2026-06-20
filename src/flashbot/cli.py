@@ -27,6 +27,8 @@ from flashbot.logger.result_store import init_db, get_results
 from flashbot.config.sketch_scanner import update_manifest
 from flashbot.pipeline.state_machine import PipelineStateMachine, PipelineState
 import pyudev
+import signal
+import sys
 
 # ── Global State ──────────────────────────────────────────────
 console = Console()
@@ -129,7 +131,7 @@ def prompt_register_board(unknown: UnknownBoard):
     _save_user_boards()
     show_registered(name, fqbn)
 
-    from detector.device_id import DetectedDevice
+    from flashbot.detector.device_id import DetectedDevice
     return DetectedDevice(
         port=unknown.port,
         name=name,
@@ -391,17 +393,29 @@ def main():
         init_db()
         update_manifest()
         watcher = start_sketch_watcher()
-        check_already_connected()
-        start_listener(on_device, on_unknown=on_unknown)
-        console.print("[dim]Listening for USB devices... (Ctrl+C to quit)[/dim]")
+        
+        def handle_sigint(sig, frame):
+            global _shutdown
+            _shutdown = True
+
+        signal.signal(signal.SIGINT, handle_sigint)
+
         try:
+            check_already_connected()
+            start_listener(on_device, on_unknown=on_unknown)
+            console.print("[dim]Listening for USB devices... (Ctrl+C to quit)[/dim]")
             while not _shutdown:
                 time.sleep(0.5)
         except KeyboardInterrupt:
             pass
-        watcher.stop()
-        watcher.join()
-        console.print("[bold red]Stopping.[/bold red]")
+        finally:
+            console.print("[bold red]Stopping.[/bold red]")
+            try:
+                watcher.stop()
+                watcher.join(timeout=2)
+            except Exception:
+                pass
+            sys.exit(0)
 
 
 # ── Entry Point ───────────────────────────────────────────────
