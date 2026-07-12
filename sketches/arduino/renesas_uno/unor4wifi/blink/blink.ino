@@ -1,12 +1,16 @@
+#include <Servo.h>
+
+Servo myServo;
+
 void setup() {
-    Serial.begin(9600);
-    pinMode(LED_BUILTIN, OUTPUT);
+  myServo.attach(9);  // signal wire to pin 9 (any PWM-capable pin works)
 }
 
 void loop() {
-    Serial.println("blink");
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(1000);
-    digitalWrite(LED_BUILTIN, LOW);
-    delay(1000);
+  myServo.write(0);
+  delay(1000);
+  myServo.write(90);
+  delay(1000);
+  myServo.write(180);
+  delay(1000);
 }
