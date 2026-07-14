@@ -1,6 +1,6 @@
 # FlashBot
 
-**Version: v0.1.0-alpha**
+**Version: v0.2.0-alpha**
 
 > *Plug in your microcontroller. FlashBot detects, compiles, flashes, tests, and logs — automatically.*
 
@@ -396,7 +396,6 @@ Usually a stale import path left over from before the Poetry restructure. All in
 
 ## Roadmap
 
-- **v0.2.0** — `~/.flashbot/` user data directory (sketches + DB outside package source)
 - **v0.3.0** — Non-interactive mode for batch flashing in labs
 - **v0.4.0** — STM32, Teensy, Raspberry Pi Pico support
 - **v1.0.0** — Stable multi-platform release with documentation site
