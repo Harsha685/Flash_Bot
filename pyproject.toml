@@ -1,27 +1,46 @@
 [project]
 name = "flashbot"
-version = "0.1.0"
-description = "Automated embedded firmware development pipeline — detection, compilation, flashing, testing, and logging in one CLI tool."
+version = "0.3.0"
+description = "Automated firmware pipeline for microcontroller boards: detect, build, flash, test, and log from one command."
 authors = [
-    {name = "Harsha685 harshavardhanchelluri@gmail.com"}
+    { name = "Harsha685", email = "harshavardhanchelluri@gmail.com" },
 ]
 license = "MIT"
 readme = "README.md"
-requires-python = "^3.10"
+requires-python = ">=3.10"
+keywords = ["arduino", "platformio", "esp32", "rp2040", "firmware", "embedded", "cli"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Embedded Systems",
+]
 dependencies = [
     "pyserial (>=3.5,<4.0)",
-    "pyudev (>=0.24.4,<0.25.0)",
-    "rich (>=15.0.0,<16.0.0)",
-    "watchdog (>=6.0.0,<7.0.0)"
+    "pyudev (>=0.24.4,<0.25.0) ; sys_platform == 'linux'",
+    "rich (>=13.0.0,<16.0.0)",
+    "watchdog (>=4.0.0,<7.0.0)",
 ]
 
+[project.urls]
+Homepage = "https://github.com/Harsha685/Flash_Bot"
+Documentation = "https://harsha685.github.io/Flash_Bot/"
+Issues = "https://github.com/Harsha685/Flash_Bot/issues"
 
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+[project.scripts]
+flashbot = "flashbot.cli:main"
 
 [tool.poetry]
 packages = [{ include = "flashbot", from = "src" }]
 
-[tool.poetry.scripts]
-flashbot = "flashbot.cli:main"
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.0"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

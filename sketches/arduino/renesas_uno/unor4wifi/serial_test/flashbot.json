@@ -1,0 +1,8 @@
+{
+  "baud": 9600,
+  "tests": [
+    {"name": "ping", "send": "PING", "expect": "PONG"},
+    {"name": "led_on", "send": "LED_ON", "expect": "OK"},
+    {"name": "led_off", "send": "LED_OFF", "expect": "OK"}
+  ]
+}

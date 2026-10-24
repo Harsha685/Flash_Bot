@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FlashBot Documentation</title>
+  <meta name="description" content="Installation, configuration, and command reference for FlashBot, the automated build, flash, and test pipeline for microcontroller boards.">
+  <script>
+    try { var t = localStorage.getItem("flashbot-theme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23c2410c'/%3E%3Cpath d='M18 5 9 18h6l-1 9 9-13h-6z' fill='%23fff'/%3E%3C/svg%3E">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <button class="icon-btn menu-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <a class="brand" href="index.html" aria-label="FlashBot home">
+      <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent)"/><path d="M18 5 9 18h6l-1 9 9-13h-6z" fill="#fff"/></svg>
+      FlashBot <span class="version">v0.3.0</span>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a class="hide-sm" href="docs.html" aria-current="page">Documentation</a>
+      <a class="hide-sm" href="https://github.com/Harsha685/Flash_Bot/blob/main/CHANGELOG.md">Changelog</a>
+      <a href="https://github.com/Harsha685/Flash_Bot">GitHub</a>
+    </nav>
+    <button class="icon-btn theme-toggle" type="button" aria-label="Toggle color theme">
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="container docs">
+
+  <aside class="sidebar" id="sidebar" aria-label="Documentation">
+    <label class="visually-hidden" for="doc-search">Filter topics</label>
+    <input class="sidebar-search" id="doc-search" type="search" placeholder="Filter topics" autocomplete="off">
+    <h4>Getting started</h4>
+    <ul>
+      <li><a href="#introduction">Introduction</a></li>
+      <li><a href="#requirements">Requirements</a></li>
+      <li><a href="#installation">Installation</a></li>
+      <li><a href="#quick-start">Quick start</a></li>
+    </ul>
+    <h4>Guides</h4>
+    <ul>
+      <li><a href="#workspace">Workspace layout</a></li>
+      <li><a href="#arduino-sketches">Arduino sketches</a></li>
+      <li><a href="#platformio">PlatformIO projects</a></li>
+      <li><a href="#libraries">Libraries</a></li>
+      <li><a href="#tests">Post-flash tests</a></li>
+      <li><a href="#registration">Board registration</a></li>
+      <li><a href="#serial-tools">Serial monitor and plotter</a></li>
+      <li><a href="#unattended">Unattended operation</a></li>
+      <li><a href="#parallel">Parallel flashing</a></li>
+      <li><a href="#ci">Continuous integration</a></li>
+    </ul>
+    <h4>Reference</h4>
+    <ul>
+      <li><a href="#commands">Commands</a></li>
+      <li><a href="#options">Options</a></li>
+      <li><a href="#configuration">Configuration files</a></li>
+      <li><a href="#hardware">Supported hardware</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+    </ul>
+    <h4>Help</h4>
+    <ul>
+      <li><a href="#troubleshooting">Troubleshooting</a></li>
+      <li><a href="#development">Development</a></li>
+    </ul>
+    <p class="no-results">No matching topics.</p>
+  </aside>
+
+  <article class="doc">
+    <header>
+      <h1>FlashBot documentation</h1>
+      <p>Installation, configuration, and reference for version 0.3.0.</p>
+    </header>
+
+    <!-- Getting started -->
+
+    <section id="introduction">
+      <h2>Introduction</h2>
+      <p>
+        FlashBot is a command-line tool that automates the firmware workflow for microcontroller boards.
+        When a board is connected, FlashBot identifies it, finds the firmware in your workspace that targets it,
+        builds that firmware with arduino-cli or PlatformIO, uploads it, verifies the result over the serial port,
+        and records the outcome in a local database.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Stage</th><th>Behaviour</th></tr></thead>
+          <tbody>
+            <tr><td>Detect</td><td>Listens for USB hotplug events (udev on Linux, polling elsewhere) and reads the USB vendor and product IDs.</td></tr>
+            <tr><td>Identify</td><td>Maps the USB ID to a board name, FQBN, and PlatformIO board ID. Unrecognised boards can be registered once.</td></tr>
+            <tr><td>Select</td><td>Finds every Arduino sketch and PlatformIO environment that targets the board.</td></tr>
+            <tr><td>Build</td><td>Compiles the selection. Arduino builds are skipped when the sources have not changed since the last successful build.</td></tr>
+            <tr><td>Flash</td><td>Uploads to the board, retrying where the platform benefits from it.</td></tr>
+            <tr><td>Test</td><td>Waits for the board to re-enumerate and runs the serial tests declared for the sketch.</td></tr>
+            <tr><td>Record</td><td>Stores the run, the failing stage if any, and the test outcome.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="requirements">
+      <h2>Requirements</h2>
+      <ul>
+        <li>Python 3.10 or later.</li>
+        <li>Linux. This is the primary platform and uses udev for hotplug detection. Other platforms fall back to polling and are untested.</li>
+        <li><a href="https://arduino.github.io/arduino-cli/latest/installation/">arduino-cli</a> for Arduino sketches.</li>
+        <li><a href="https://docs.platformio.org/en/latest/core/installation/">PlatformIO Core</a> for PlatformIO projects. Optional.</li>
+        <li>Membership in the <code>dialout</code> group for serial port access.</li>
+      </ul>
+    </section>
+
+    <section id="installation">
+      <h2>Installation</h2>
+      <ol class="steps">
+        <li>
+          <strong>Clone the repository</strong>
+<pre><code>git clone https://github.com/Harsha685/Flash_Bot.git
+cd Flash_Bot</code></pre>
+        </li>
+        <li>
+          <strong>Install the package</strong>
+          <p>With Poetry, for development:</p>
+<pre><code>poetry install
+poetry run flashbot --version</code></pre>
+          <p>Or with pip, which installs the <code>flashbot</code> command into the active environment:</p>
+<pre><code>pip install .</code></pre>
+        </li>
+        <li>
+          <strong>Install arduino-cli cores</strong>
+          <p>Install the cores for the boards you use. The ESP32 and RP2040 cores need their package indexes registered first.</p>
+<pre><code>arduino-cli config add board_manager.additional_urls \
+  https://espressif.github.io/arduino-esp32/package_esp32_index.json \
+  https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
+arduino-cli core update-index
+arduino-cli core install arduino:avr arduino:renesas_uno esp32:esp32 rp2040:rp2040</code></pre>
+        </li>
+        <li>
+          <strong>Grant serial port access</strong>
+<pre><code>sudo usermod -aG dialout $USER   <span class="c"># log out and back in afterwards</span></code></pre>
+        </li>
+        <li>
+          <strong>Verify the environment</strong>
+<pre><code>flashbot doctor</code></pre>
+          <p><code>doctor</code> checks Python, arduino-cli and its installed cores, PlatformIO, serial permissions, hotplug support, ModemManager, and the workspace.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section id="quick-start">
+      <h2>Quick start</h2>
+      <p>The repository includes example sketches, so it can be used as a workspace directly. From the repository root:</p>
+<pre><code>flashbot</code></pre>
+      <p>Connect a board. FlashBot shows the identified board, lists matching firmware, and runs the pipeline for the entry you select:</p>
+      <div class="terminal" style="margin-bottom:1.25rem">
+        <div class="terminal-bar"><span class="dots"><span></span><span></span><span></span></span>flashbot</div>
+<pre><span class="t-green t-bold">Arduino Uno R4 WiFi</span>
+  <span class="t-muted">Port</span>        /dev/ttyACM0
+  <span class="t-muted">FQBN</span>        arduino:renesas_uno:unor4wifi
+  <span class="t-muted">USB ID</span>      2341:1002
+
+Firmware available for <span class="t-bold">Arduino Uno R4 WiFi</span>:
+   <span class="t-cyan">1</span>  serial_test
+   <span class="t-cyan">2</span>  blink
+   <span class="t-cyan">3</span>  Skip this board
+   <span class="t-cyan">4</span>  Quit FlashBot
+Select: 1
+
+<span class="t-cyan">&gt;</span> Build
+<span class="t-green">Build succeeded</span>
+<span class="t-cyan">&gt;</span> Upload
+<span class="t-green">Upload succeeded</span>
+<span class="t-cyan">&gt;</span> Test
+  ping      <span class="t-green">PASS</span>   <span class="t-muted">PONG</span>
+  led_on    <span class="t-green">PASS</span>   <span class="t-muted">OK</span>
+  led_off   <span class="t-green">PASS</span>   <span class="t-muted">OK</span>
+
+<span class="t-green">Success</span>  serial_test on Arduino Uno R4 WiFi, all tests passed <span class="t-muted">(14.2s)</span>
+
+<span class="t-bold">Next step</span>
+   <span class="t-cyan">1</span>  Open serial monitor
+   <span class="t-cyan">2</span>  Open serial plotter
+   <span class="t-cyan">3</span>  Continue</pre>
+      </div>
+      <p>To flash a single board and exit, for example from a script:</p>
+<pre><code>flashbot flash serial_test</code></pre>
+    </section>
+
+    <!-- Guides -->
+
+    <section id="workspace">
+      <h2>Workspace layout</h2>
+      <p>FlashBot reads firmware from, and writes its state to, a workspace directory:</p>
+<pre><code>&lt;workspace&gt;/
+├── sketches/    Arduino sketches and PlatformIO projects
+├── config/      user_boards.json, firmware_manifest.json (generated)
+├── build/       compiler output, one directory per board and sketch
+└── logs/        flashbot.db</code></pre>
+      <p>The workspace is resolved in this order:</p>
+      <ol>
+        <li>The <code>--workspace</code> option.</li>
+        <li>The <code>FLASHBOT_HOME</code> environment variable.</li>
+        <li>The current directory, if it contains a <code>sketches/</code> directory.</li>
+        <li><code>~/.flashbot</code>.</li>
+      </ol>
+      <p>Create a workspace with <code>flashbot init &lt;path&gt;</code>. The active workspace is shown in the banner when FlashBot starts.</p>
+      <div class="callout">
+        <strong>Live updates</strong>
+        <p>While <code>flashbot run</code> is active, new or removed sketches and projects are picked up automatically. No restart is required.</p>
+      </div>
+    </section>
+
+    <section id="arduino-sketches">
+      <h2>Arduino sketches</h2>
+      <p>The folder path of an Arduino sketch encodes the board's fully qualified board name (FQBN):</p>
+<pre><code>sketches/&lt;vendor&gt;/&lt;arch&gt;/&lt;board&gt;[/&lt;option&gt;=&lt;value&gt;...]/&lt;name&gt;/&lt;name&gt;.ino</code></pre>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>FQBN</th><th>Sketch location</th></tr></thead>
+          <tbody>
+            <tr><td><code>arduino:avr:uno</code></td><td><code>sketches/arduino/avr/uno/blink/blink.ino</code></td></tr>
+            <tr><td><code>arduino:avr:nano:cpu=atmega328old</code></td><td><code>sketches/arduino/avr/nano/cpu=atmega328old/imu/imu.ino</code></td></tr>
+            <tr><td><code>esp32:esp32:esp32s3</code></td><td><code>sketches/esp32/esp32/esp32s3/web_server/web_server.ino</code></td></tr>
+            <tr><td><code>rp2040:rp2040:rpipico</code></td><td><code>sketches/rp2040/rp2040/rpipico/blink/blink.ino</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul>
+        <li>The <code>.ino</code> file name must match its folder name.</li>
+        <li>Board options become additional folder levels, one per option, in the form <code>key=value</code>.</li>
+        <li>Additional <code>.cpp</code>, <code>.c</code>, and <code>.h</code> files in the sketch folder are compiled and included in change detection.</li>
+      </ul>
+      <p>Run <code>flashbot sketches</code> to list everything that was discovered. Folders that do not follow the layout are reported as warnings with the reason.</p>
+
+      <h3 id="build-cache">Build cache</h3>
+      <p>
+        Each sketch and FQBN pair has its own build directory under <code>build/</code>. Before compiling, FlashBot hashes every
+        source file in the sketch folder. If the hash matches the last successful build and the build output is present,
+        compilation is skipped and the existing binary is uploaded. Use <code>--no-cache</code> to force a rebuild.
+      </p>
+    </section>
+
+    <section id="platformio">
+      <h2>PlatformIO projects</h2>
+      <p>
+        Any directory under <code>sketches/</code> that contains a <code>platformio.ini</code> is treated as a PlatformIO project.
+        Each <code>[env:...]</code> section becomes a separate target and is offered for boards whose PlatformIO board ID matches the
+        environment's <code>board</code> value. Values from the shared <code>[env]</code> section and from <code>extends</code> are applied.
+      </p>
+<pre><code>sketches/platformio/heartbeat/
+├── platformio.ini
+├── flashbot.json
+└── src/main.cpp</code></pre>
+<pre><code>[env]
+framework = arduino
+monitor_speed = 115200
+
+[env:esp32dev]
+platform = espressif32
+board = esp32dev
+
+[env:uno_r4_wifi]
+platform = renesas-ra
+board = uno_r4_wifi</code></pre>
+      <p>Library dependencies are declared with <code>lib_deps</code> in <code>platformio.ini</code>, as usual for PlatformIO.</p>
+      <p>FlashBot runs <code>pio run</code> to build and <code>pio run --target upload --upload-port &lt;port&gt;</code> to flash. PlatformIO performs its own incremental builds.</p>
+
+      <h3 id="pio-matching">Matching environments to boards</h3>
+      <p>Built-in boards carry their PlatformIO board ID (for example <code>esp32dev</code> or <code>uno_r4_wifi</code>). For other boards, use one of the following:</p>
+      <ul>
+        <li>Register the board with a PlatformIO ID: <code>flashbot boards add VID:PID --fqbn ... --pio-board my_board</code>.</li>
+        <li>Pin the environment to an FQBN in <code>platformio.ini</code>:</li>
+      </ul>
+<pre><code>[env:custom]
+board = my_custom_board
+custom_flashbot_fqbn = esp32:esp32:esp32s3</code></pre>
+      <p>To flash or build a specific environment, pass <code>--env</code>:</p>
+<pre><code>flashbot flash heartbeat --env esp32dev
+flashbot build sketches/platformio/heartbeat --env uno_r4_wifi</code></pre>
+    </section>
+
+    <section id="libraries">
+      <h2>Libraries</h2>
+      <p>
+        A <code>flashbot.json</code> file next to an Arduino sketch holds per-sketch settings. Its <code>libraries</code> key lists the
+        Arduino libraries the sketch needs, so it builds on any machine, including CI runners:
+      </p>
+<pre><code>{
+  "libraries": ["Adafruit BMP280 Library", "Servo@1.2.1"]
+}</code></pre>
+      <p>
+        Before compiling, FlashBot installs the listed libraries with <code>arduino-cli lib install</code>. Use the names shown by
+        <code>arduino-cli lib search</code>, and append <code>@version</code> to pin a release. Libraries that are already installed are left
+        as they are. When compilation is skipped because the sources are unchanged, no installation is attempted.
+      </p>
+    </section>
+
+    <section id="tests">
+      <h2>Post-flash tests</h2>
+      <p>
+        After uploading, FlashBot waits for the board to re-enumerate, following it to a new port if the path changes,
+        then opens the serial port and runs the test suite. Without a test file, the suite checks that the port opens, which
+        confirms the new firmware booted.
+      </p>
+      <p>To define tests, add them to the <code>flashbot.json</code> file next to the sketch, or in the root of a PlatformIO project:</p>
+<pre><code>{
+  "baud": 9600,
+  "boot_delay": 2.0,
+  "tests": [
+    {"name": "boot_banner", "expect": "READY", "timeout": 5},
+    {"name": "ping", "send": "PING", "expect": "PONG"},
+    {"name": "status", "send": "STATUS", "expect": "^OK", "regex": true}
+  ]
+}</code></pre>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Field</th><th>Default</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>baud</code></td><td>detected</td><td>PlatformIO <code>monitor_speed</code>, then the first <code>Serial.begin()</code> in the source, then 9600.</td></tr>
+            <tr><td><code>boot_delay</code></td><td>2.0</td><td>Seconds to wait after opening the port. Opening the port resets most Arduino-compatible boards.</td></tr>
+            <tr><td><code>tests[].name</code></td><td><code>test_N</code></td><td>Name shown in results and in the history report.</td></tr>
+            <tr><td><code>tests[].send</code></td><td>none</td><td>Line to send. Omit to only wait for output, for example a boot banner.</td></tr>
+            <tr><td><code>tests[].expect</code></td><td>any reply</td><td>Text a received line must contain.</td></tr>
+            <tr><td><code>tests[].regex</code></td><td>false</td><td>Treat <code>expect</code> as a regular expression.</td></tr>
+            <tr><td><code>tests[].timeout</code></td><td>2.0</td><td>Seconds to wait for a matching line.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>The firmware side only needs to read lines and print replies:</p>
+<pre><code>void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  if (Serial.available()) {
+    String cmd = Serial.readStringUntil('\n');
+    cmd.trim();
+    if (cmd == "PING") Serial.println("PONG");
+  }
+}</code></pre>
+      <p>A run is recorded as successful only if the build, the upload, and every test pass. Use <code>--no-test</code> to skip testing.</p>
+      <div class="callout">
+        <strong>Waiting for boot output</strong>
+        <p>Tests without <code>send</code> see what the board prints after FlashBot opens the port. Boards that reset when the port opens (Uno, Nano, Mega, and ESP32 boards with a CP210x or CH340 bridge) print their boot output again at that point. Boards with native USB (Uno R4, Leonardo, Pico, ESP32-C3/S3) do not, so a message printed only once at boot can be missed. For those boards, test periodic output or use a <code>send</code> and <code>expect</code> pair.</p>
+      </div>
+    </section>
+
+    <section id="registration">
+      <h2>Board registration</h2>
+      <p>
+        When an unrecognised board is connected in interactive mode, FlashBot shows its USB ID and offers a list of common boards
+        grouped by vendor, with an option to enter any FQBN. The registration is saved to <code>config/user_boards.json</code>
+        and used from then on.
+      </p>
+<pre><code>{
+  "1a86:7523": {
+    "name": "Nano clone",
+    "fqbn": "arduino:avr:nano:cpu=atmega328old"
+  }
+}</code></pre>
+      <p>Registrations can also be managed from the command line:</p>
+<pre><code>flashbot boards list                    <span class="c"># built-in and user boards</span>
+flashbot boards add                     <span class="c"># register the connected unrecognised board</span>
+flashbot boards add 16c0:0483 --name "Teensy 4.1" --fqbn teensy:avr:teensy41
+flashbot boards remove 16c0:0483</code></pre>
+      <div class="callout">
+        <strong>Generic USB-serial bridges</strong>
+        <p>CP210x, CH340, and FTDI bridges are used by many different boards. If one is mapped to the wrong board, register the correct board for that USB ID; user registrations take precedence over the built-in table.</p>
+      </div>
+    </section>
+
+    <section id="serial-tools">
+      <h2>Serial monitor and plotter</h2>
+      <p>After a successful interactive run, FlashBot offers to open either tool on the board's current port with the detected baud rate. Both are also available directly:</p>
+<pre><code>flashbot monitor                        <span class="c"># auto-detect port, choose baud rate</span>
+flashbot monitor /dev/ttyUSB0 -b 115200 -l logs/session.log
+flashbot plotter --labels temperature humidity</code></pre>
+      <p>The monitor prints timestamped output and sends each line you type. The plotter accepts labelled values such as <code>temp: 24.5, hum=60</code>, or bare numbers separated by commas, tabs, or spaces, and shows a trend, the latest value, and the range for each series.</p>
+    </section>
+
+    <section id="unattended">
+      <h2>Unattended operation</h2>
+      <p>
+        <code>flashbot run --auto</code> never prompts. For each recognised board it flashes the most recently modified matching firmware,
+        or the one named with <code>--sketch</code>, runs the tests, records the result, and waits for the next board. Unrecognised boards
+        are logged and skipped.
+      </p>
+<pre><code>flashbot run --auto --sketch serial_test</code></pre>
+
+      <h3 id="parallel">Parallel flashing</h3>
+      <p>With <code>--jobs N</code>, up to N boards are handled at the same time, which suits teaching labs and production stations with a USB hub:</p>
+<pre><code>flashbot run --auto --jobs 4 --sketch serial_test</code></pre>
+      <ul>
+        <li>Each output line is prefixed with the board's port, for example <code>[ttyUSB0]</code>.</li>
+        <li>Boards that share a build directory (the same sketch for the same FQBN) compile and upload one at a time; their tests still run in parallel.</li>
+        <li>Identical boards without a USB serial number, such as two CH340 clones, are told apart by their port.</li>
+      </ul>
+
+      <h3 id="systemd">systemd service</h3>
+      <p>The repository includes a template unit, <code>flashbot.service</code>. Set the user and paths, then install it:</p>
+<pre><code>sudo cp flashbot.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now flashbot
+journalctl -u flashbot -f</code></pre>
+
+      <h3 id="docker">Docker</h3>
+      <p>The image contains arduino-cli with the AVR, Renesas, ESP32, and RP2040 cores, and PlatformIO Core. It runs in unattended mode by default.</p>
+<pre><code>docker compose up --build</code></pre>
+      <p>The container runs privileged with <code>/dev</code> and <code>/run/udev</code> mounted so it receives hotplug events. The <code>sketches/</code>, <code>config/</code>, <code>logs/</code>, and <code>build/</code> directories are mounted from the host, and PlatformIO packages are cached in a named volume.</p>
+    </section>
+
+    <section id="ci">
+      <h2>Continuous integration</h2>
+      <p><code>flashbot build</code> compiles firmware without hardware and exits with a non-zero status if any build fails, so it can gate pull requests.</p>
+<pre><code>flashbot build                          <span class="c"># every target in the workspace</span>
+flashbot build --fqbn esp32:esp32:esp32 <span class="c"># only targets for one board</span>
+flashbot build serial_test              <span class="c"># by name</span>
+flashbot build path/to/sketch --fqbn arduino:avr:uno</code></pre>
+      <p>A sketch outside <code>sketches/</code> has no FQBN in its path, so <code>--fqbn</code> is required.</p>
+
+      <h3 id="reports">Machine-readable results</h3>
+      <p><code>flashbot build</code> and <code>flashbot flash</code> can write their results for CI dashboards:</p>
+<pre><code>flashbot build --junit reports/build.xml
+flashbot flash serial_test --yes --json reports/flash.json --junit reports/flash.xml</code></pre>
+      <p>
+        The JUnit XML file contains one test suite per target and one test case per step: build, upload, and each post-flash test,
+        with the toolchain's error message on failures. The JSON file contains a summary and the same per-step detail.
+      </p>
+
+      <h3 id="github-actions">GitHub Actions</h3>
+      <p>
+        The repository's workflow, <code>.github/workflows/ci.yml</code>, runs the unit tests on Python 3.10 to 3.13, installs arduino-cli
+        and PlatformIO, compiles the Uno R4 and Nano firmware, and uploads the JUnit reports as build artifacts. It can be copied into
+        a firmware repository and adjusted to the cores it needs.
+      </p>
+    </section>
+
+    <!-- Reference -->
+
+    <section id="commands">
+      <h2>Commands</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Command</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>flashbot</code>, <code>flashbot run</code></td><td>Watch for boards and run the pipeline interactively.</td></tr>
+            <tr><td><code>flashbot run --auto</code></td><td>Unattended mode for flashing stations.</td></tr>
+            <tr><td><code>flashbot run --auto --jobs N</code></td><td>Unattended mode, flashing up to N boards in parallel.</td></tr>
+            <tr><td><code>flashbot flash [TARGET]</code></td><td>Build, flash, and test one connected board, then exit.</td></tr>
+            <tr><td><code>flashbot build [TARGET]</code></td><td>Compile without hardware. Builds every target when none is given.</td></tr>
+            <tr><td><code>flashbot sketches</code></td><td>List discovered firmware and report layout problems.</td></tr>
+            <tr><td><code>flashbot devices</code></td><td>List connected serial devices and how they were identified.</td></tr>
+            <tr><td><code>flashbot boards list</code></td><td>List built-in and user-registered boards.</td></tr>
+            <tr><td><code>flashbot boards add [VID:PID]</code></td><td>Register a board.</td></tr>
+            <tr><td><code>flashbot boards remove VID:PID</code></td><td>Remove a user registration.</td></tr>
+            <tr><td><code>flashbot monitor [PORT]</code></td><td>Open the serial monitor.</td></tr>
+            <tr><td><code>flashbot plotter [PORT]</code></td><td>Open the serial plotter.</td></tr>
+            <tr><td><code>flashbot report</code></td><td>Show flash history and a failure summary.</td></tr>
+            <tr><td><code>flashbot init [PATH]</code></td><td>Create a workspace.</td></tr>
+            <tr><td><code>flashbot doctor</code></td><td>Check toolchains, cores, permissions, and the workspace.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><code>TARGET</code> is a path to a sketch folder, an <code>.ino</code> file, or a PlatformIO project, or the name of a discovered sketch or project.</p>
+    </section>
+
+    <section id="options">
+      <h2>Options</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Option</th><th>Commands</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>-w, --workspace DIR</code></td><td>all</td><td>Use a specific workspace.</td></tr>
+            <tr><td><code>--version</code></td><td>all</td><td>Print the version and exit.</td></tr>
+            <tr><td><code>--auto</code></td><td>run</td><td>Unattended mode.</td></tr>
+            <tr><td><code>--sketch NAME</code></td><td>run</td><td>Only flash the named sketch or project.</td></tr>
+            <tr><td><code>-j, --jobs N</code></td><td>run</td><td>With <code>--auto</code>, flash up to N boards in parallel. Default 1.</td></tr>
+            <tr><td><code>--json FILE</code></td><td>flash, build</td><td>Write results as JSON.</td></tr>
+            <tr><td><code>--junit FILE</code></td><td>flash, build</td><td>Write results as JUnit XML.</td></tr>
+            <tr><td><code>-p, --port PORT</code></td><td>flash</td><td>Serial port of the board. Defaults to the connected board.</td></tr>
+            <tr><td><code>--fqbn FQBN</code></td><td>flash, build, boards add</td><td>Override or filter by FQBN.</td></tr>
+            <tr><td><code>-e, --env NAME</code></td><td>flash, build</td><td>PlatformIO environment.</td></tr>
+            <tr><td><code>-y, --yes</code></td><td>flash</td><td>Never prompt; choose the newest matching firmware.</td></tr>
+            <tr><td><code>--no-test</code></td><td>run, flash</td><td>Skip post-flash tests.</td></tr>
+            <tr><td><code>--no-cache</code></td><td>run, flash</td><td>Recompile even if sources are unchanged.</td></tr>
+            <tr><td><code>--name</code>, <code>--pio-board</code></td><td>boards add</td><td>Display name and PlatformIO board ID.</td></tr>
+            <tr><td><code>--user</code></td><td>boards list</td><td>Only show user registrations.</td></tr>
+            <tr><td><code>-b, --baud RATE</code></td><td>monitor, plotter</td><td>Baud rate. Prompted if omitted.</td></tr>
+            <tr><td><code>-l, --log FILE</code></td><td>monitor</td><td>Also write output to a file.</td></tr>
+            <tr><td><code>-n, --history N</code></td><td>plotter</td><td>Samples kept per series. Default 80.</td></tr>
+            <tr><td><code>--labels NAME...</code></td><td>plotter</td><td>Names for unlabelled columns.</td></tr>
+            <tr><td><code>-n, --limit N</code></td><td>report</td><td>Number of runs to show. Default 25.</td></tr>
+            <tr><td><code>--failed</code></td><td>report</td><td>Only show failed runs.</td></tr>
+            <tr><td><code>--days N</code></td><td>report</td><td>Window for the failure summary. Default 7.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="exit-codes">Exit codes</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Code</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code>0</code></td><td>Success.</td></tr>
+            <tr><td><code>1</code></td><td>A build, upload, or test failed, or <code>doctor</code> found a blocking problem.</td></tr>
+            <tr><td><code>2</code></td><td>Usage or configuration error, such as no board connected or a missing tool.</td></tr>
+            <tr><td><code>130</code></td><td>Interrupted with Ctrl+C.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="configuration">
+      <h2>Configuration files</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Setting</th><th>Location</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>FLASHBOT_HOME</code></td><td>environment</td><td>Workspace directory.</td></tr>
+            <tr><td><code>user_boards.json</code></td><td><code>config/</code></td><td>User board registrations: USB ID to name, FQBN, and optional PlatformIO board.</td></tr>
+            <tr><td><code>firmware_manifest.json</code></td><td><code>config/</code></td><td>Generated list of discovered targets. Not intended for editing.</td></tr>
+            <tr><td><code>flashbot.json</code></td><td>sketch or project folder</td><td>Library dependencies, post-flash tests, and baud rate.</td></tr>
+            <tr><td><code>custom_flashbot_fqbn</code></td><td><code>platformio.ini</code></td><td>Pins a PlatformIO environment to an FQBN.</td></tr>
+            <tr><td><code>flashbot.db</code></td><td><code>logs/</code></td><td>SQLite history of every run. Older databases are migrated automatically.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="hardware">
+      <h2>Supported hardware</h2>
+      <p>Any board supported by an installed arduino-cli core or PlatformIO platform can be built and flashed. The following are identified automatically from their USB ID.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Board</th><th>USB ID</th><th>FQBN</th><th>PlatformIO</th></tr></thead>
+          <tbody>
+            <tr><td>Arduino Uno</td><td><code>2341:0043</code>, <code>2341:0001</code>, <code>2a03:0043</code></td><td><code>arduino:avr:uno</code></td><td><code>uno</code></td></tr>
+            <tr><td>Arduino Mega 2560</td><td><code>2341:0010</code>, <code>2341:0042</code></td><td><code>arduino:avr:mega</code></td><td><code>megaatmega2560</code></td></tr>
+            <tr><td>Arduino Leonardo</td><td><code>2341:8036</code></td><td><code>arduino:avr:leonardo</code></td><td><code>leonardo</code></td></tr>
+            <tr><td>Arduino Micro</td><td><code>2341:8037</code></td><td><code>arduino:avr:micro</code></td><td><code>micro</code></td></tr>
+            <tr><td>Arduino Nano Every</td><td><code>2341:0058</code></td><td><code>arduino:megaavr:nona4809</code></td><td><code>nano_every</code></td></tr>
+            <tr><td>Arduino Nano 33 IoT</td><td><code>2341:8057</code></td><td><code>arduino:samd:nano_33_iot</code></td><td><code>nano_33_iot</code></td></tr>
+            <tr><td>Arduino Uno R4 WiFi</td><td><code>2341:1002</code></td><td><code>arduino:renesas_uno:unor4wifi</code></td><td><code>uno_r4_wifi</code></td></tr>
+            <tr><td>Arduino Uno R4 Minima</td><td><code>2341:0069</code></td><td><code>arduino:renesas_uno:minima</code></td><td><code>uno_r4_minima</code></td></tr>
+            <tr><td>ESP32 (CP210x bridge)</td><td><code>10c4:ea60</code></td><td><code>esp32:esp32:esp32</code></td><td><code>esp32dev</code></td></tr>
+            <tr><td>ESP32 (CH340 bridge)</td><td><code>1a86:7523</code></td><td><code>esp32:esp32:esp32</code></td><td><code>esp32dev</code></td></tr>
+            <tr><td>ESP32-S2 (native USB)</td><td><code>303a:0002</code></td><td><code>esp32:esp32:esp32s2</code></td><td><code>esp32-s2-saola-1</code></td></tr>
+            <tr><td>ESP32-S3</td><td><code>303a:1002</code></td><td><code>esp32:esp32:esp32s3</code></td><td><code>esp32-s3-devkitc-1</code></td></tr>
+            <tr><td>ESP32-C3</td><td><code>303a:1001</code>, <code>303a:1003</code></td><td><code>esp32:esp32:esp32c3</code></td><td><code>esp32-c3-devkitm-1</code></td></tr>
+            <tr><td>Raspberry Pi Pico</td><td><code>2e8a:000a</code></td><td><code>rp2040:rp2040:rpipico</code></td><td><code>pico</code></td></tr>
+            <tr><td>Raspberry Pi Pico W</td><td><code>2e8a:f00a</code></td><td><code>rp2040:rp2040:rpipicow</code></td><td><code>rpipicow</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Teensy 4.0 and 4.1, STM32 Nucleo-F401RE and F446RE, the STM32 Blue Pill, and the Raspberry Pi Pico 2 are available in the registration list. Their USB IDs are shared across models or belong to a debug probe, so they cannot be identified automatically.</p>
+      <div class="callout">
+        <strong>ESP32-C3 and ESP32-S3 with native USB</strong>
+        <p>Both chips expose the same USB-Serial/JTAG ID (<code>303a:1001</code>), which FlashBot maps to the ESP32-C3. Register the ID as an ESP32-S3 if that is the board you use.</p>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <h2>Architecture</h2>
+<pre><code>USB hotplug ──&gt; detector ──&gt; cli (Session) ──&gt; pipeline ──&gt; flasher ──&gt; tester ──&gt; logger
+                   │                │                          │
+              boards registry   firmware scanner         arduino-cli / pio</code></pre>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Module</th><th>Responsibility</th></tr></thead>
+          <tbody>
+            <tr><td><code>detector/</code></td><td>Built-in USB IDs and the user registry, port enumeration, identification, re-enumeration tracking, and the udev listener with a polling fallback.</td></tr>
+            <tr><td><code>firmware/</code></td><td>Discovery of Arduino sketches and PlatformIO environments, <code>platformio.ini</code> and <code>flashbot.json</code> parsing, the manifest, and live rescans.</td></tr>
+            <tr><td><code>flasher/</code></td><td>The <code>get_flasher</code> factory, a generic arduino-cli flasher with build caching, an ESP32 variant with upload retry, and the PlatformIO flasher.</td></tr>
+            <tr><td><code>pipeline/</code></td><td>The state machine that runs build, flash, and test, and records the result.</td></tr>
+            <tr><td><code>tester/</code></td><td><code>flashbot.json</code> loading, baud detection, line-oriented serial I/O, and test execution.</td></tr>
+            <tr><td><code>logger/</code></td><td>SQLite storage with automatic migrations, the history report, and JSON and JUnit XML export.</td></tr>
+            <tr><td><code>tools/</code></td><td>Serial monitor and serial plotter.</td></tr>
+            <tr><td><code>cli.py</code>, <code>ui.py</code></td><td>Command implementations, Rich panels, and prompts.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3 id="design">Design notes</h3>
+      <ul>
+        <li><strong>Hotplug events are handled on the main thread.</strong> The listener thread only queues events, so prompts and Ctrl+C behave normally, and events from a board resetting after upload are discarded by a short cooldown.</li>
+        <li><strong>The flasher factory chooses the toolchain.</strong> Supporting a new build tool means one <code>BaseFlasher</code> subclass and one branch in <code>get_flasher</code>; the pipeline does not change.</li>
+        <li><strong>Build caching is per sketch and per FQBN.</strong> A cached binary always belongs to the sketch being flashed.</li>
+        <li><strong>The state machine is hardware-independent.</strong> The flasher, port waiter, and test runner are injected, which lets the unit tests cover every outcome without a board.</li>
+      </ul>
+    </section>
+
+    <!-- Help -->
+
+    <section id="troubleshooting">
+      <h2>Troubleshooting</h2>
+      <p>Start with <code>flashbot doctor</code>, <code>flashbot devices</code>, and <code>flashbot sketches</code>. Together they show the toolchain state, how the board was identified, and what firmware was found.</p>
+
+      <h3 id="ts-no-firmware">No firmware found for a board</h3>
+      <p>The folder path does not produce the board's FQBN, or no PlatformIO environment uses its board ID. Compare the FQBN in <code>flashbot devices</code> with the paths in <code>flashbot sketches</code>, and check for layout warnings.</p>
+
+      <h3 id="ts-permission">Permission denied on the serial port</h3>
+      <p>Add your user to the <code>dialout</code> group with <code>sudo usermod -aG dialout $USER</code>, then log out and back in.</p>
+
+      <h3 id="ts-busy">Device or resource busy</h3>
+      <p>Another program holds the port. Close other serial monitors. On Ubuntu, ModemManager often claims new serial devices; disable it with <code>sudo systemctl disable --now ModemManager</code>.</p>
+
+      <h3 id="ts-core">Platform not installed</h3>
+      <p>Install the core named in the error, for example <code>arduino-cli core install esp32:esp32</code>. <code>flashbot doctor</code> lists installed cores.</p>
+
+      <h3 id="ts-esp32">ESP32 upload cannot connect</h3>
+      <p>FlashBot retries ESP32 uploads once. If the board still does not enter the bootloader, hold BOOT while the upload starts. Boards without auto-reset circuitry may need a 10 uF capacitor between EN and GND.</p>
+
+      <h3 id="ts-reappear">Board did not reappear after upload</h3>
+      <p>The firmware may need longer to start, or the board enumerated with a different USB ID, for example a Raspberry Pi Pico running MicroPython. Increase <code>boot_delay</code> in <code>flashbot.json</code>, or check the new ID with <code>flashbot devices</code>.</p>
+
+      <h3 id="ts-wrong-board">Wrong board detected</h3>
+      <p>The board uses a USB-serial bridge that is shared with other boards. Register the correct board for that USB ID with <code>flashbot boards add VID:PID</code>.</p>
+    </section>
+
+    <section id="development">
+      <h2>Development</h2>
+<pre><code>poetry install
+poetry run pytest</code></pre>
+      <p>The test suite covers discovery, PlatformIO parsing, board registration, test-suite loading, the plotter parser, and every pipeline outcome, without requiring hardware. Contribution guidelines are in <a href="https://github.com/Harsha685/Flash_Bot/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>, and release notes are in <a href="https://github.com/Harsha685/Flash_Bot/blob/main/CHANGELOG.md">CHANGELOG.md</a>.</p>
+      <div class="pager">
+        <a href="index.html">Back to overview</a>
+        <a href="#introduction">Back to top</a>
+      </div>
+    </section>
+
+  </article>
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    <span>FlashBot is released under the MIT License.</span>
+    <nav aria-label="Footer">
+      <a href="index.html">Overview</a>
+      <a href="https://github.com/Harsha685/Flash_Bot/blob/main/CONTRIBUTING.md">Contributing</a>
+      <a href="https://github.com/Harsha685/Flash_Bot/issues">Issues</a>
+      <a href="https://github.com/Harsha685/Flash_Bot">GitHub</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>

@@ -1,37 +1,29 @@
 FROM python:3.12-slim
 
-WORKDIR /app
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    FLASHBOT_HOME=/workspace
 
-# System dependencies
-RUN apt-get update && apt-get install -y \
-    udev \
-    curl \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends udev curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install arduino-cli
-RUN curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
-RUN arduino-cli core update-index \
-    --additional-urls https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
-RUN arduino-cli core install arduino:avr
-RUN arduino-cli core install arduino:renesas_uno
-RUN arduino-cli core install esp32:esp32 \
-    --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-RUN arduino-cli core install rp2040:rp2040 \
-    --additional-urls https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
+# arduino-cli and the cores FlashBot supports out of the box
+RUN curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | BINDIR=/usr/local/bin sh
+RUN arduino-cli config init \
+    && arduino-cli config add board_manager.additional_urls \
+       https://espressif.github.io/arduino-esp32/package_esp32_index.json \
+       https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json \
+    && arduino-cli update \
+    && arduino-cli core install arduino:avr arduino:renesas_uno esp32:esp32 rp2040:rp2040
 
-# Install Poetry
-RUN pip install poetry
+# PlatformIO Core; platforms are downloaded on first use and cached in the pio volume
+RUN pip install platformio
 
-# Copy dependency files first (better layer caching)
-COPY pyproject.toml poetry.lock ./
-
-# Install dependencies without creating a venv (we're already in a container)
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi
-
-# Copy source
+WORKDIR /app
+COPY pyproject.toml poetry.lock README.md ./
 COPY src/ ./src/
-COPY sketches/ ./sketches/
+RUN pip install .
 
-# Entry point via installed CLI command
-CMD ["flashbot"]
+WORKDIR /workspace
+CMD ["flashbot", "run", "--auto"]

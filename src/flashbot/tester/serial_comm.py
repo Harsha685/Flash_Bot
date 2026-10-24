@@ -1,61 +1,70 @@
-import serial
-import serial.tools.list_ports
+import re
 import time
+from typing import Optional
+
+import serial
+
 
 class SerialComm:
-    def __init__(self, port: str, baud: int = 9600, timeout: float = 2.0):
+    """Line-oriented serial access for automated tests."""
+
+    def __init__(self, port: str, baud: int = 9600, timeout: float = 0.2):
         self.port = port
         self.baud = baud
         self.timeout = timeout
-        self.serial = None
+        self.serial: Optional[serial.Serial] = None
 
-    def connect(self, retries: int = 3, delay: float = 1.0):
-        available = self.list_ports()
-        if self.port not in available:
-            raise ConnectionError(
-                f"Port {self.port} not found.\nAvailable ports: {available}"
-            )
+    def connect(self, retries: int = 5, delay: float = 1.0, boot_delay: float = 2.0) -> None:
+        """Open the port, retrying while the OS finishes re-enumerating the board."""
+        last_error = None
         for attempt in range(retries):
             try:
-                self.serial = serial.Serial(
-                    port=self.port,
-                    baudrate=self.baud,
-                    timeout=self.timeout
-                )
-                time.sleep(2)  # wait for board reset
+                self.serial = serial.Serial(self.port, self.baud, timeout=self.timeout)
+                time.sleep(boot_delay)  # opening the port resets many boards
                 return
-            except serial.SerialException as e:
+            except (serial.SerialException, OSError) as e:
+                last_error = e
                 if attempt < retries - 1:
                     time.sleep(delay)
-                else:
-                    raise ConnectionError(
-                        f"Could not open {self.port} after {retries} attempts: {e}"
-                    )
+        raise ConnectionError(f"Could not open {self.port} after {retries} attempts: {last_error}")
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         if self.serial and self.serial.is_open:
             self.serial.close()
 
-    def send(self, command: str) -> str:
-        if not self.serial or not self.serial.is_open:
-            raise RuntimeError("Not connected. Use context manager or call connect() first.")
-        try:
-            self.serial.reset_input_buffer()
-            self.serial.write((command + '\n').encode('utf-8'))
-            response = self.serial.readline()
-            if not response:
-                raise TimeoutError(f"No response to '{command}' within {self.timeout}s")
-            return response.decode('utf-8', errors='replace').strip()
-        except serial.SerialException as e:
-            try:
-                time.sleep(1)
-                self.connect()
-                return self.send(command)
-            except Exception:
-                raise ConnectionError(f"Board disconnected and reconnect failed: {e}")
-
     def is_connected(self) -> bool:
         return self.serial is not None and self.serial.is_open
+
+    def read_until(self, expect: str, timeout: float, regex: bool = False) -> tuple[bool, list[str]]:
+        """Read lines until one contains `expect` (or matches it, if regex) or the timeout expires."""
+        if not self.is_connected():
+            raise RuntimeError("Serial port is not open")
+        pattern = re.compile(expect) if regex else None
+        lines: list[str] = []
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            raw = self.serial.readline()
+            if not raw:
+                continue
+            line = raw.decode("utf-8", errors="replace").strip()
+            if not line:
+                continue
+            lines.append(line)
+            if (pattern.search(line) if pattern else expect in line):
+                return True, lines
+        return False, lines
+
+    def transact(self, command: str, expect: str, timeout: float,
+                 regex: bool = False) -> tuple[bool, list[str]]:
+        """Send a command and wait for a matching line. Without `expect`, any reply passes."""
+        if not self.is_connected():
+            raise RuntimeError("Serial port is not open")
+        self.serial.reset_input_buffer()
+        self.serial.write((command + "\n").encode("utf-8"))
+        self.serial.flush()
+        if expect:
+            return self.read_until(expect, timeout, regex)
+        return self.read_until("", timeout)
 
     def __enter__(self):
         self.connect()
@@ -64,8 +73,3 @@ class SerialComm:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.disconnect()
         return False
-
-    @staticmethod
-    def list_ports():
-        ports = serial.tools.list_ports.comports()
-        return [p.device for p in ports if p.vid is not None]
