@@ -1,5 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+dist/
+.pytest_cache/
+
+# FlashBot runtime output
+build/
 logs/
 *.db
-__pycache__/
-venv/
-build/
+config/firmware_manifest.json
+
+# PlatformIO
+.pio/
+
+# Editors
+.vscode/
+.idea/
+reports/

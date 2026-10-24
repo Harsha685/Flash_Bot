@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Unit tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: pip install . pytest
+      - name: Run tests
+        run: pytest -q
+
+  firmware:
+    name: Firmware builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: arduino/setup-arduino-cli@v2
+      - name: Cache toolchains
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.arduino15
+            ~/.platformio
+          key: toolchains-${{ runner.os }}-${{ hashFiles('sketches/**/platformio.ini') }}
+          restore-keys: toolchains-${{ runner.os }}-
+      - name: Install FlashBot and toolchains
+        run: |
+          pip install . platformio
+          arduino-cli update
+          arduino-cli core install arduino:avr arduino:renesas_uno
+      - name: Check environment
+        run: flashbot doctor || true
+      - name: Build Uno R4 WiFi firmware
+        run: flashbot build --fqbn arduino:renesas_uno:unor4wifi --junit reports/uno-r4.xml
+      - name: Build Arduino Nano firmware
+        run: flashbot build --fqbn arduino:avr:nano:cpu=atmega328old --junit reports/nano.xml
+      - name: Upload build reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-build-reports
+          path: reports/

@@ -1,0 +1,5 @@
+{
+  "tests": [
+    {"name": "heartbeat", "expect": "heartbeat", "timeout": 5}
+  ]
+}

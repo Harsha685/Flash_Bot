@@ -1,162 +1,110 @@
-import argparse
-import sys
-import time
-import signal
-import threading
-import select
+"""
+Terminal serial plotter.
+
+Accepts either labelled values ("temp: 24.5, hum=60") or bare numbers separated
+by commas, tabs, or spaces ("24.5,60.2"). Bare columns are named from --labels
+or Ch0, Ch1, ... in order.
+"""
+
 import re
+import signal
+import time
 from collections import deque
-from pathlib import Path
+from typing import Optional
 
-from flashbot.tools.serial_base import SerialConnection, guess_port
+from rich import box
+from rich.live import Live
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
 
-try:
-    from rich.console import Console
-    from rich.live import Live
-    from rich.panel import Panel
-    from rich.text import Text
-    RICH_AVAILABLE = True
-except ImportError:
-    RICH_AVAILABLE = False
+from flashbot.console import console
+from flashbot.tools.serial_base import SerialConnection
+
+_NUMBER = r"[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?"
+_LABELLED = re.compile(rf"([A-Za-z_][A-Za-z0-9_]*)\s*[:=]\s*({_NUMBER})")
+_SPLIT = re.compile(r"[,\t ]+")
+_BLOCKS = " ▁▂▃▄▅▆▇█"
+_COLORS = ["cyan", "magenta", "green", "yellow", "blue", "red"]
+
+
+def parse_line(line: str, labels: Optional[list[str]] = None) -> dict[str, float]:
+    labels = labels or []
+    labelled = _LABELLED.findall(line)
+    if labelled:
+        return {name: float(value) for name, value in labelled}
+    fields = [f for f in _SPLIT.split(line.strip()) if f]
+    try:
+        values = [float(f) for f in fields]
+    except ValueError:
+        return {}
+    return {(labels[i] if i < len(labels) else f"Ch{i}"): v for i, v in enumerate(values)}
+
+
+def sparkline(values: list[float], lo: float, hi: float) -> str:
+    span = (hi - lo) or 1.0
+    top = len(_BLOCKS) - 1
+    return "".join(_BLOCKS[round((v - lo) / span * top)] for v in values)
 
 
 class SerialPlotter:
-    def __init__(self, port: str, baudrate: int = 115200,
-                 history: int = 80, labels: list = None):
+    def __init__(self, port: str, baudrate: int = 115200, history: int = 80,
+                 labels: Optional[list[str]] = None):
         self.conn = SerialConnection(port, baudrate)
         self.history = history
         self.labels = labels or []
         self.data: dict[str, deque[float]] = {}
-        self.console = Console() if RICH_AVAILABLE else None
         self._running = False
 
-    def _parse_line(self, line: str) -> dict[str, float]:
-        result = {}
+    def _ingest(self, line: str) -> None:
+        for label, value in parse_line(line, self.labels).items():
+            self.data.setdefault(label, deque(maxlen=self.history)).append(value)
 
-        labeled = re.findall(r'([A-Za-z_][A-Za-z0-9_]*)\s*[:=]\s*(-?\d+\.?\d*)', line)
-        if labeled:
-            for label, val in labeled:
-                result[label] = float(val)
-            return result
+    def _render(self) -> Panel:
+        title = f"Serial Plotter  {self.conn.port} at {self.conn.baudrate} baud"
+        if not self.data:
+            body = Text("Waiting for numeric data. Expected formats: 'temp: 24.5' or '24.5,60.2'.", style="dim")
+            return Panel(body, title=title, border_style="cyan", title_align="left")
 
-        try:
-            vals = [float(x.strip()) for x in line.split(',') if x.strip()]
-            for i, v in enumerate(vals):
-                label = self.labels[i] if i < len(self.labels) else f"Ch{i}"
-                result[label] = v
-            return result
-        except ValueError:
-            pass
+        table = Table(box=box.SIMPLE, show_edge=False, pad_edge=False, expand=True)
+        table.add_column("Series", no_wrap=True)
+        table.add_column("Trend", ratio=1, no_wrap=True, overflow="crop")
+        for col in ("Last", "Min", "Max"):
+            table.add_column(col, justify="right", no_wrap=True)
 
-        return {}
+        for i, (label, series) in enumerate(self.data.items()):
+            values = list(series)
+            lo, hi = min(values), max(values)
+            color = _COLORS[i % len(_COLORS)]
+            table.add_row(
+                Text(label, style=f"bold {color}"), Text(sparkline(values, lo, hi), style=color),
+                f"{values[-1]:.2f}", f"{lo:.2f}", f"{hi:.2f}",
+            )
+        footer = Text("Each trend is scaled to its own min and max. Press Ctrl+C to exit.", style="dim")
+        return Panel(_stack(table, footer), title=title, border_style="cyan", title_align="left")
 
-    def _render_ascii(self, data: dict[str, deque[float]]) -> str:
-        lines = []
-        max_val = 0.01
-        min_val = 0
-
-        for series in data.values():
-            if series:
-                max_val = max(max_val, max(series))
-                min_val = min(min_val, min(series))
-
-        height = 10
-        for label, series in data.items():
-            if not series:
-                continue
-            vals = list(series)
-            line = f"{label:12} "
-
-            rng = max_val - min_val if max_val != min_val else 1
-            bars = []
-            for v in vals[-self.history:]:
-                h = int(((v - min_val) / rng) * height)
-                bars.append(h)
-
-            spark = ""
-            for h in bars:
-                blocks = " ▁▂▃▄▅▆▇█"
-                idx = min(h, len(blocks) - 1)
-                spark += blocks[idx]
-
-            line += spark + f"  ({vals[-1]:.2f})"
-            lines.append(line)
-
-        return "\n".join(lines) if lines else "Waiting for numeric data..."
-
-    def _render_rich(self, data: dict[str, deque[float]]):
-        content = self._render_ascii(data)
-        return Panel(
-            Text(content),
-            title=f"Serial Plotter — {self.conn.port} @ {self.conn.baudrate}",
-            border_style="cyan"
-        )
-
-    def run(self):
+    def run(self) -> None:
         if not self.conn.open():
             return
-
         self._running = True
-
-        def handle_sigint(sig, frame):
-            self._running = False
-
-        old_handler = signal.signal(signal.SIGINT, handle_sigint)
-
-        print(f"Serial Plotter — {self.conn.port} @ {self.conn.baudrate}")
-        print("Expecting: 'Temp: 24.5' or '24.5,60.2' format. Ctrl+C to exit.\n")
-
+        previous = signal.signal(signal.SIGINT, lambda *_: setattr(self, "_running", False))
         try:
-            if self.console:
-                with Live(self._render_rich(self.data), refresh_per_second=10) as live:
-                    while self._running:
-                        line = self.conn.readline()
-                        if line:
-                            parsed = self._parse_line(line)
-                            for label, val in parsed.items():
-                                if label not in self.data:
-                                    self.data[label] = deque(maxlen=self.history)
-                                self.data[label].append(val)
-                            live.update(self._render_rich(self.data))
-                        else:
-                            time.sleep(0.01)
-            else:
-                while self._running:
+            with Live(self._render(), console=console, refresh_per_second=10, transient=False) as live:
+                while self._running and self.conn.is_open():
                     line = self.conn.readline()
                     if line:
-                        parsed = self._parse_line(line)
-                        for label, val in parsed.items():
-                            if label not in self.data:
-                                self.data[label] = deque(maxlen=self.history)
-                            self.data[label].append(val)
-                        print("\033[2J\033[H")
-                        print(self._render_ascii(self.data))
+                        self._ingest(line)
+                        live.update(self._render())
                     else:
-                        time.sleep(0.05)
-        except KeyboardInterrupt:
-            self._running = False
+                        time.sleep(0.01)
         finally:
-            signal.signal(signal.SIGINT, old_handler)
+            signal.signal(signal.SIGINT, previous)
             self.conn.close()
-            print("\nDisconnected.")
+            console.print("[muted]Plotter closed.[/muted]")
 
 
-def main():
-    parser = argparse.ArgumentParser(description="FlashBot Serial Plotter")
-    parser.add_argument("port", nargs="?", default=None, help="Serial port (auto-detect if omitted)")
-    parser.add_argument("-b", "--baud", type=int, default=115200)
-    parser.add_argument("-n", "--history", type=int, default=80)
-    parser.add_argument("--labels", nargs="+", default=[],
-                       help="Labels for CSV columns (e.g. --labels Temp Humidity)")
-    args = parser.parse_args()
-
-    port = args.port or guess_port()
-    if not port:
-        print("No serial port found. Please specify one.")
-        sys.exit(1)
-
-    SerialPlotter(port, args.baud, args.history, args.labels).run()
-
-
-if __name__ == "__main__":
-    main()
+def _stack(*renderables) -> Table:
+    grid = Table.grid()
+    for r in renderables:
+        grid.add_row(r)
+    return grid

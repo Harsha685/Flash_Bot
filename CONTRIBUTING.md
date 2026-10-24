@@ -1,149 +1,82 @@
 # Contributing to FlashBot
 
-Thanks for your interest in contributing. FlashBot is a small open source project and contributions are welcome — especially from embedded developers who work with boards I don't have access to.
+Contributions are welcome, particularly from developers with access to boards that the maintainers cannot test. This document describes how to set up a development environment and the most common kinds of contribution.
 
----
-
-## Ways to Contribute
-
-### Add a new board
-
-The board lookup table lives in `detector/device_id.py`. Adding a board is one dict entry:
-
-```python
-("vid", "pid"): {"name": "Your Board Name", "fqbn": "vendor:arch:board"},
-```
-
-To find the VID and PID of your board on Linux:
-
-```bash
-lsusb
-```
-
-The output looks like `ID 2341:0043` — `2341` is the VID, `0043` is the PID. Use lowercase without `0x` prefix.
-
-To find the FQBN:
-
-```bash
-arduino-cli board listall
-```
-
-### Add a new flasher
-
-If your board uses a different toolchain than `arduino-cli` (STM32, Teensy, RP2040), add a new flasher:
-
-1. Create `flasher/your_flasher.py`
-2. Inherit from `BaseFlasher`
-3. Implement three methods:
-
-```python
-from flasher.base_flasher import BaseFlasher
-
-class YourFlasher(BaseFlasher):
-
-    def __init__(self, fqbn: str):
-        self.fqbn = fqbn
-
-    def build(self, sketch_path: str) -> bool:
-        # compile the sketch, return True on success
-        pass
-
-    def flash(self, port: str, sketch_path: str) -> bool:
-        # flash to board, return True on success
-        pass
-
-    def get_supported_fqbns(self) -> list[str]:
-        return ["your:board:fqbn"]
-```
-
-4. Register it in `flasher/__init__.py`:
-
-```python
-from flasher.your_flasher import YourFlasher
-
-def get_flasher(fqbn: str):
-    if fqbn.startswith("your:"):
-        return YourFlasher(fqbn)
-    ...
-```
-
-That's it. The rest of the pipeline picks it up automatically.
-
-### Add serial tests for a sketch
-
-Open `tester/test_cases.py` and add a condition for your sketch name:
-
-```python
-elif "your_sketch" in sketch_name:
-    return [
-        TestCase("test_name", "COMMAND", "EXPECTED_RESPONSE", timeout=2),
-    ]
-```
-
-Your sketch needs to respond over serial. Minimal example:
-
-```cpp
-void setup() { Serial.begin(9600); }
-
-void loop() {
-    if (Serial.available()) {
-        String cmd = Serial.readStringUntil('\n');
-        cmd.trim();
-        if (cmd == "PING") Serial.println("PONG");
-    }
-}
-```
-
-### Report a bug
-
-Open an issue at https://github.com/Harsha685/Flash_Bot/issues
-
-Include:
-- Your board name and FQBN
-- Your Linux distro and version
-- What you ran and what happened
-- Any error output
-
----
-
-## Getting Started
+## Development setup
 
 ```bash
 git clone https://github.com/Harsha685/Flash_Bot.git
 cd Flash_Bot
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+poetry install
+poetry run pytest
+poetry run flashbot doctor
 ```
 
----
+Without Poetry, use a virtual environment and `pip install -e .` followed by `pip install pytest`.
 
-## Submitting a Pull Request
+## Adding a board to the built-in table
 
-1. Fork the repository on GitHub
-2. Create a branch with a descriptive name:
-   ```bash
-   git checkout -b add-stm32-support
+Boards that can be identified unambiguously from their USB ID belong in `BUILTIN_BOARDS` in `src/flashbot/detector/boards.py`:
+
+```python
+("2341", "0043"): BoardInfo("Arduino Uno", "arduino:avr:uno"),
+```
+
+- Find the VID and PID with `lsusb` (for example `ID 2341:0043`). Use lowercase hexadecimal without a `0x` prefix.
+- Find the FQBN with `arduino-cli board listall`.
+- If the board has a PlatformIO equivalent, add the FQBN to `FQBN_TO_PIO` in the same file. The PlatformIO ID is listed by `pio boards`.
+- Do not add generic USB-serial bridges or debug probes that are shared by many boards (for example the Teensy serial ID or ST-LINK). Add those boards to `COMMON_BOARDS` instead so users can select them during registration.
+
+## Adding a toolchain
+
+Arduino-compatible cores and PlatformIO platforms are already supported through `ArduinoCliFlasher` and `PlatformIOFlasher`. A new flasher is only needed for a different build or upload tool.
+
+1. Create `src/flashbot/flasher/<name>.py` with a subclass of `BaseFlasher`:
+
+   ```python
+   from flashbot.flasher.base import BaseFlasher, StepResult, run_tool
+
+
+   class ExampleFlasher(BaseFlasher):
+       def build(self) -> StepResult:
+           proc = run_tool(["example-tool", "build", str(self.source_dir)], "Building")
+           if proc.returncode != 0:
+               return StepResult(ok=False, error=self._failure("Build", proc))
+           return StepResult(ok=True)
+
+       def flash(self, port: str) -> StepResult:
+           proc = run_tool(["example-tool", "upload", "--port", port, str(self.source_dir)], "Uploading")
+           if proc.returncode != 0:
+               return StepResult(ok=False, error=self._failure("Upload", proc))
+           return StepResult(ok=True)
    ```
-3. Make your changes
-4. Test with a real board if possible
-5. Commit with a clear message:
-   ```bash
-   git commit -m "add STM32F4 support via OpenOCD"
-   ```
-6. Push and open a pull request
 
----
+2. Select it in `get_flasher` in `src/flashbot/flasher/__init__.py`.
+3. Add tests. The pipeline tests in `tests/test_pipeline.py` show how to inject a fake flasher.
 
-## Code Style
+## Adding tests for a sketch
 
-- Python 3.10+
-- Type hints on function signatures
-- Keep new flashers consistent with `ArduinoFlasher` as a reference
-- No external dependencies unless absolutely necessary — check `requirements.txt` before adding
+Serial tests and library dependencies are declared in a `flashbot.json` file next to the sketch rather than in code. If you add a sketch that uses a library, list it under `libraries` so the sketch builds in CI. See the "Sketch settings and tests" section of the README for the format, and `sketches/arduino/renesas_uno/unor4wifi/serial_test/` for an example.
 
----
+## Coding guidelines
 
-## Questions
+- Target Python 3.10 and use type hints on public functions.
+- Keep the pipeline hardware-independent: anything that touches a tool or a port should be injectable.
+- Print through the shared console in `flashbot.console`. Print device output as `rich.text.Text`, never as markup.
+- Avoid new runtime dependencies unless they are clearly necessary.
+- Add or update tests for behaviour changes, and update the README and `docs/` when commands or formats change.
 
-Open an issue or start a discussion on GitHub. Happy to help.
+## Submitting changes
+
+1. Fork the repository and create a descriptively named branch, for example `add-nano-esp32`.
+2. Make your changes and run `poetry run pytest`.
+3. Test with real hardware where possible, and state in the pull request which boards you used.
+4. Open a pull request that describes the change and its motivation.
+
+## Reporting issues
+
+Open an issue at https://github.com/Harsha685/Flash_Bot/issues and include:
+
+- The output of `flashbot doctor` and `flashbot devices`
+- The board, its FQBN or PlatformIO environment, and your operating system
+- The command you ran and the complete output

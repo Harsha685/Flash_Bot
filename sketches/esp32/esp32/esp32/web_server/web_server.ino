@@ -3,8 +3,8 @@
 #include <WebServer.h>
 #include <uri/UriBraces.h>
 
-#define WIFI_SSID "Arun"
-#define WIFI_PASSWORD "8309396883"
+#define WIFI_SSID "YOUR_WIFI_SSID"
+#define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
 
 WebServer server(80);
 

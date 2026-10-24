@@ -1,53 +1,54 @@
-"""
-Runs test cases over serial after flashing.
-Uses tester/serial_comm.py for all port I/O.
-"""
+"""Runs a TestSuite against a freshly flashed board."""
+
+from dataclasses import dataclass
 
 from flashbot.tester.serial_comm import SerialComm
-from flashbot.tester.test_cases import TestCase
+from flashbot.tester.test_cases import TestCase, TestSuite
+
+
+@dataclass
+class TestResult:
+    __test__ = False  # not a pytest test class
+
+    name: str
+    passed: bool
+    detail: str = ""
 
 
 class TestRunner:
-    def __init__(self, port: str, baudrate: int = 9600):
-        self.comm = SerialComm(port, baud=baudrate, timeout=2.0)
+    __test__ = False
 
-    def run_test(self, test_case: TestCase):
-        if not self.comm.is_connected():
-            raise RuntimeError("Serial port not open")
+    def __init__(self, port: str, suite: TestSuite):
+        self.suite = suite
+        self.comm = SerialComm(port, baud=suite.baud)
 
-        if test_case.command:
-            response = self.comm.send(test_case.command)
+    def _run_one(self, tc: TestCase) -> TestResult:
+        if not tc.send and not tc.expect:
+            return TestResult(tc.name, True, "port opened")
+        if tc.send:
+            matched, lines = self.comm.transact(tc.send, tc.expect, tc.timeout, tc.regex)
         else:
-            response = ""
+            matched, lines = self.comm.read_until(tc.expect, tc.timeout, tc.regex)
+        if matched:
+            return TestResult(tc.name, True, lines[-1] if lines else "")
+        if tc.expect:
+            got = lines[-1] if lines else "no output"
+            return TestResult(tc.name, False, f"expected '{tc.expect}', got: {got}")
+        return TestResult(tc.name, False, "no response")
 
-        if test_case.expected_response:
-            passed = test_case.expected_response in response
-        else:
-            passed = True
+    def run(self) -> tuple[bool, list[TestResult]]:
+        try:
+            self.comm.connect(boot_delay=self.suite.boot_delay)
+        except ConnectionError as e:
+            return False, [TestResult(tc.name, False, str(e)) for tc in self.suite.tests]
 
-        return passed, response
-
-    def run_all(self, test_cases: list[TestCase]):
         results = []
-        all_passed = True
-
-        with self.comm:
-            for tc in test_cases:
+        try:
+            for tc in self.suite.tests:
                 try:
-                    passed, response = self.run_test(tc)
-                    results.append({
-                        "name": tc.name,
-                        "passed": passed,
-                        "response": response
-                    })
-                    if not passed:
-                        all_passed = False
+                    results.append(self._run_one(tc))
                 except Exception as e:
-                    results.append({
-                        "name": tc.name,
-                        "passed": False,
-                        "response": str(e)
-                    })
-                    all_passed = False
-
-        return all_passed, results
+                    results.append(TestResult(tc.name, False, str(e)))
+        finally:
+            self.comm.disconnect()
+        return all(r.passed for r in results), results

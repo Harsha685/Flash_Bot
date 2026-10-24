@@ -1,12 +1,20 @@
+# systemd unit for running FlashBot unattended on a flashing station.
+#
+# 1. Replace YOUR_USER and the paths below.
+# 2. sudo cp flashbot.service /etc/systemd/system/
+# 3. sudo systemctl daemon-reload && sudo systemctl enable --now flashbot
+# 4. journalctl -u flashbot -f
+
 [Unit]
-Description=FlashBot Hardware Automation Pipeline
+Description=FlashBot firmware pipeline
 After=network.target
 
 [Service]
 Type=simple
-User=harsha-vardhan
-WorkingDirectory=/home/harsha-vardhan/Desktop/Projects/FlashBot
-ExecStart=/home/harsha-vardhan/Desktop/Projects/FlashBot/venv/bin/python flashbot.py
+User=YOUR_USER
+Environment=FLASHBOT_HOME=/home/YOUR_USER/flashbot-workspace
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/YOUR_USER/.local/bin/flashbot run --auto
 Restart=on-failure
 RestartSec=5
 
